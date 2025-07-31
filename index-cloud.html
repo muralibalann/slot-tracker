@@ -542,12 +542,12 @@
         // Firebase configuration - REPLACE WITH YOUR CONFIG
         const firebaseConfig = {
              apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
-  authDomain: "slot-tracker-c7ec1.firebaseapp.com",
-  databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
-  projectId: "slot-tracker-c7ec1",
-  storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
-  messagingSenderId: "639902490570",
-  appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
+             authDomain: "slot-tracker-c7ec1.firebaseapp.com",
+             databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
+             projectId: "slot-tracker-c7ec1",
+             storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
+             messagingSenderId: "639902490570",
+             appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
         };
 
         // Initialize variables
@@ -842,76 +842,54 @@
         }
 
         function stopWork() {
-    if (currentSession) {
-        // End the session immediately
-        currentSession.end = new Date().toISOString();
-        currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
-
-        // Push the session (notes will be added later)
-        memoryStorage.todayData.sessions.push(currentSession);
-
-        // Update totals based on type
-        if (currentSession.type === 'work') {
-            memoryStorage.todayData.totalWorkTime += currentSession.duration;
-            memoryStorage.todayData.slotsCompleted = Math.floor(
-                memoryStorage.todayData.totalWorkTime / memoryStorage.settings.slotDuration
-            );
-        } else {
-            memoryStorage.todayData.totalBreakTime += currentSession.duration;
+            if (currentSession) {
+                document.getElementById('sessionNotes').classList.add('show');
+                document.getElementById('notesInput').focus();
+            }
         }
 
-        // Save data immediately (without notes yet)
-        saveData();
+        function saveSessionNote() {
+            if (currentSession) {
+                currentSession.end = new Date().toISOString();
+                currentSession.notes = document.getElementById('notesInput').value;
+                currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
+                
+                memoryStorage.todayData.sessions.push(currentSession);
+                
+                if (currentSession.type === 'work') {
+                    memoryStorage.todayData.totalWorkTime += currentSession.duration;
+                    memoryStorage.todayData.slotsCompleted = Math.floor(
+                        memoryStorage.todayData.totalWorkTime / memoryStorage.settings.slotDuration
+                    );
+                } else {
+                    memoryStorage.todayData.totalBreakTime += currentSession.duration;
+                }
+                
+                saveData();
+                currentSession = null;
+                document.getElementById('notesInput').value = '';
+                document.getElementById('sessionNotes').classList.remove('show');
+            }
 
-        // Clear current session reference
-        currentSession = null;
+            isWorking = false;
+            onBreak = false;
+            sessionStartTime = null;
+            breakStartTime = null;
 
-        // Stop timer and update state/UI
-        isWorking = false;
-        onBreak = false;
-        sessionStartTime = null;
-        breakStartTime = null;
-        if (updateInterval) {
-            clearInterval(updateInterval);
-            updateInterval = null;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('breakBtn').disabled = true;
+            document.getElementById('currentStatus').textContent = 'Idle';
+            
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+            
+            updateDisplay();
+            displayTodaySessions();
         }
-        document.getElementById('currentStatus').textContent = 'Idle';
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('stopBtn').disabled = true;
-        document.getElementById('breakBtn').disabled = true;
 
-        // Show notes section for adding achievement notes
-        document.getElementById('sessionNotes').classList.add('show');
-        document.getElementById('notesInput').focus();
-        document.getElementById('startBtn').disabled = true;
-document.getElementById('breakBtn').disabled = true;
-// Re-enable in saveSessionNote() after hiding notes
-document.getElementById('startBtn').disabled = false;
-document.getElementById('breakBtn').disabled = true; // Keep disabled since session ended
-    }
-}
-
-       function saveSessionNote() {
-    // Get the last pushed session (the one just ended)
-    const lastSession = memoryStorage.todayData.sessions[memoryStorage.todayData.sessions.length - 1];
-    console.log('Save button clicked');
-
-    if (lastSession) {
-        // Add notes to the last session
-        lastSession.notes = document.getElementById('notesInput').value;
-
-        // Save updated data (with notes)
-        saveData();
-    }
-
-    // Clear input and hide notes section
-    document.getElementById('notesInput').value = '';
-    document.getElementById('sessionNotes').classList.remove('show');
-
-    // Update UI
-    updateDisplay();
-    displayTodaySessions();
-}
         function toggleBreak() {
             if (onBreak) {
                 breakStartTime = null;
@@ -944,9 +922,6 @@ document.getElementById('breakBtn').disabled = true; // Keep disabled since sess
                     currentSession.notes = 'Auto-saved before break';
                     memoryStorage.todayData.sessions.push(currentSession);
                     memoryStorage.todayData.totalWorkTime += currentSession.duration;
-                    memoryStorage.todayData.slotsCompleted = Math.floor(
-    memoryStorage.todayData.totalWorkTime / memoryStorage.settings.slotDuration
-);
                     saveData();
                 }
                 
@@ -962,65 +937,52 @@ document.getElementById('breakBtn').disabled = true; // Keep disabled since sess
         }
 
         function updateDisplay() {
-    const now = new Date();
-    const settings = memoryStorage.settings;
-
-    // Defensive defaults for settings that affect slot/time calculation
-    if (typeof settings.slotDuration !== "number" || settings.slotDuration <= 0) settings.slotDuration = 5;
-    if (typeof settings.targetSlots !== "number" || settings.targetSlots <= 0) settings.targetSlots = 150;
-
-    let currentWorkTime = memoryStorage.todayData.totalWorkTime;
-    if (isWorking && !onBreak && sessionStartTime) {
-        currentWorkTime += (now - sessionStartTime) / 1000 / 60;
-    }
-
-    const slotsUsed = Math.floor(currentWorkTime / settings.slotDuration);
-    document.getElementById('slotsUsed').textContent = slotsUsed;
-
-    document.getElementById('slotsRemaining').textContent = (settings.targetSlots - slotsUsed);
-
-    const workHours = Math.floor(currentWorkTime / 60);
-    const workMinutes = Math.floor(currentWorkTime % 60);
-    document.getElementById('timeWorked').textContent = `${workHours}:${workMinutes.toString().padStart(2, '0')}`;
-
-    let currentBreakTime = memoryStorage.todayData.totalBreakTime;
-    if (onBreak && breakStartTime) {
-        currentBreakTime += (now - breakStartTime) / 1000 / 60;
-    }
-
-    const breakHours = Math.floor(currentBreakTime / 60);
-    const breakMinutes = Math.floor(currentBreakTime % 60);
-    document.getElementById('breakTime').textContent = `${breakHours}:${breakMinutes.toString().padStart(2, '0')}`;
-
-    const [endHour, endMinute] = settings.workEnd.split(':').map(Number);
-    const endTime = new Date();
-    endTime.setHours(endHour, endMinute, 0);
-
-    const remainingMs = Math.max(0, endTime - now);
-    const remainingMinutes = remainingMs / 1000 / 60;
-
-    let maxPossibleSlots = slotsUsed + Math.floor(remainingMinutes / settings.slotDuration);
-    // Clamp maxPossibleSlots between 0 and 300
-    maxPossibleSlots = Math.max(0, Math.min(maxPossibleSlots, 300));
-    document.getElementById('maxPossible').textContent = maxPossibleSlots;
-
-    let progress = 0;
-    if (settings.targetSlots > 0) {
-        progress = Math.min(100, (slotsUsed / settings.targetSlots) * 100);
-    }
-    document.getElementById('progressFill').style.width = progress + '%';
-    document.getElementById('progressFill').textContent = Math.round(progress) + '%';
-
-    // Show warning if not enough time left for target
-    const warningEl = document.getElementById('warning');
-    if (maxPossibleSlots < settings.targetSlots && slotsUsed < settings.targetSlots) {
-        warningEl.textContent = `⚠️ Warning: You can only complete ${maxPossibleSlots} slots today. You need ${settings.targetSlots - slotsUsed} more slots but only have time for ${maxPossibleSlots - slotsUsed}.`;
-        warningEl.classList.add('show');
-    } else {
-        warningEl.classList.remove('show');
-    }
-}
-
+            const now = new Date();
+            const settings = memoryStorage.settings;
+            
+            let currentWorkTime = memoryStorage.todayData.totalWorkTime;
+            if (isWorking && !onBreak && sessionStartTime) {
+                currentWorkTime += (now - sessionStartTime) / 1000 / 60;
+            }
+            
+            const slotsUsed = Math.floor(currentWorkTime / settings.slotDuration);
+            document.getElementById('slotsUsed').textContent = slotsUsed;
+            document.getElementById('slotsRemaining').textContent = settings.targetSlots - slotsUsed;
+            
+            const workHours = Math.floor(currentWorkTime / 60);
+            const workMinutes = Math.floor(currentWorkTime % 60);
+            document.getElementById('timeWorked').textContent = `${workHours}:${workMinutes.toString().padStart(2, '0')}`;
+            
+            let currentBreakTime = memoryStorage.todayData.totalBreakTime;
+            if (onBreak && breakStartTime) {
+                currentBreakTime += (now - breakStartTime) / 1000 / 60;
+            }
+            
+            const breakHours = Math.floor(currentBreakTime / 60);
+            const breakMinutes = Math.floor(currentBreakTime % 60);
+            document.getElementById('breakTime').textContent = `${breakHours}:${breakMinutes.toString().padStart(2, '0')}`;
+            
+            const [endHour, endMinute] = settings.workEnd.split(':').map(Number);
+            const endTime = new Date();
+            endTime.setHours(endHour, endMinute, 0);
+            
+            const remainingMs = Math.max(0, endTime - now);
+            const remainingMinutes = remainingMs / 1000 / 60;
+            const maxPossibleSlots = slotsUsed + Math.floor(remainingMinutes / settings.slotDuration);
+            document.getElementById('maxPossible').textContent = Math.min(maxPossibleSlots, 300);
+            
+            const progress = Math.min(100, (slotsUsed / settings.targetSlots) * 100);
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+            
+            const warningEl = document.getElementById('warning');
+            if (maxPossibleSlots < settings.targetSlots && slotsUsed < settings.targetSlots) {
+                warningEl.textContent = `⚠️ Warning: You can only complete ${maxPossibleSlots} slots today. You need ${settings.targetSlots - slotsUsed} more slots but only have time for ${maxPossibleSlots - slotsUsed}.`;
+                warningEl.classList.add('show');
+            } else {
+                warningEl.classList.remove('show');
+            }
+        }
 
         function displayTodaySessions() {
             const container = document.getElementById('todaySessions');
@@ -1197,12 +1159,6 @@ document.getElementById('breakBtn').disabled = true; // Keep disabled since sess
                 updateDisplay();
             }
         }, 60000);
-
-        window.addEventListener('load', () => {
-    initializeFirebase();
-    loadData(); // optionally call this if you want local fallback when offline
-});
-
     </script>
 </body>
 </html>
