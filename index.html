@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Slot Tracker</title>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiQWR2YW5jZWQgU2xvdCBUcmFja2VyIiwic2hvcnRfbmFtZSI6IlNsb3RUcmFja2VyIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmZmZmZmYiLCJ0aGVtZV9jb2xvciI6IiM2NjdlZWEiLCJvcmllbnRhdGlvbiI6InBvcnRyYWl0In0=">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#667eea">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            font-size: 1em;
+            cursor: pointer;
+            color: #64748b;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .status-card h3 {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status-card.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .status-card.primary h3 {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .status-card.primary .value {
+            color: white;
+        }
+
+        .warning {
+            background: #fee;
+            border: 2px solid #f66;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .warning.show {
+            display: block;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .start-btn {
+            background: #4ade80;
+            color: white;
+        }
+
+        .start-btn:hover {
+            background: #22c55e;
+        }
+
+        .stop-btn {
+            background: #f87171;
+            color: white;
+        }
+
+        .stop-btn:hover {
+            background: #ef4444;
+        }
+
+        .break-btn {
+            background: #fbbf24;
+            color: white;
+        }
+
+        .break-btn:hover {
+            background: #f59e0b;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .session-notes {
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .session-notes.show {
+            display: block;
+        }
+
+        .session-notes h3 {
+            color: #334155;
+            margin-bottom: 10px;
+        }
+
+        .session-notes textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .save-note-btn {
+            background: #8b5cf6;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .save-note-btn:hover {
+            background: #7c3aed;
+        }
+
+        .settings {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .settings h3 {
+            color: #334155;
+            margin-bottom: 15px;
+        }
+
+        .settings-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .settings label {
+            color: #64748b;
+            font-size: 0.9em;
+        }
+
+        .settings input {
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .history-item h4 {
+            color: #334155;
+            margin-bottom: 5px;
+        }
+
+        .history-item p {
+            color: #64748b;
+            font-size: 0.9em;
+            margin: 3px 0;
+        }
+
+        .history-item .notes {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-style: italic;
+            color: #475569;
+        }
+
+        .export-btn {
+            background: #06b6d4;
+            color: white;
+        }
+
+        .export-btn:hover {
+            background: #0891b2;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .status-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Slot Tracker</h1>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('today')">Today</button>
+            <button class="tab" onclick="switchTab('history')">History</button>
+            <button class="tab" onclick="switchTab('settings')">Settings</button>
+        </div>
+
+        <!-- Today Tab -->
+        <div id="today-tab" class="tab-content active">
+            <div class="warning" id="warning"></div>
+
+            <div class="status-grid">
+                <div class="status-card primary">
+                    <h3>Slots Used</h3>
+                    <div class="value" id="slotsUsed">0</div>
+                </div>
+                <div class="status-card">
+                    <h3>Remaining</h3>
+                    <div class="value" id="slotsRemaining">150</div>
+                </div>
+                <div class="status-card">
+                    <h3>Work Time</h3>
+                    <div class="value" id="timeWorked">0:00</div>
+                </div>
+                <div class="status-card">
+                    <h3>Break Time</h3>
+                    <div class="value" id="breakTime">0:00</div>
+                </div>
+                <div class="status-card">
+                    <h3>Current</h3>
+                    <div class="value" id="currentStatus">Idle</div>
+                </div>
+                <div class="status-card">
+                    <h3>Max Possible</h3>
+                    <div class="value" id="maxPossible">150</div>
+                </div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+            </div>
+
+            <div class="controls">
+                <button class="start-btn" id="startBtn" onclick="startWork()">Start Work</button>
+                <button class="stop-btn" id="stopBtn" onclick="stopWork()" disabled>Stop Work</button>
+                <button class="break-btn" id="breakBtn" onclick="toggleBreak()" disabled>Take Break</button>
+                <button class="export-btn" onclick="exportToday()">Export Today</button>
+                <button class="reset-btn" onclick="resetToday()">Reset Today</button>
+            </div>
+
+            <div class="session-notes" id="sessionNotes">
+                <h3>Session Notes (What did you achieve?)</h3>
+                <textarea id="notesInput" placeholder="Enter what you accomplished in this session..."></textarea>
+                <button class="save-note-btn" onclick="saveSessionNote()">Save & End Session</button>
+            </div>
+
+            <div class="history-list">
+                <h3 style="margin-bottom: 15px;">Today's Sessions</h3>
+                <div id="todaySessions"></div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history-tab" class="tab-content">
+            <div class="controls" style="margin-bottom: 20px;">
+                <button class="export-btn" onclick="exportAll()">Export All Data</button>
+                <button class="export-btn" onclick="exportWeek()">Export This Week</button>
+                <button class="export-btn" onclick="exportMonth()">Export This Month</button>
+            </div>
+            
+            <div class="history-list">
+                <h3 style="margin-bottom: 15px;">Historical Data</h3>
+                <div id="historyList"></div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-tab" class="tab-content">
+            <div class="settings">
+                <h3>Work Hours Configuration</h3>
+                <div class="settings-row">
+                    <div>
+                        <label>Start Time</label>
+                        <input type="time" id="workStart" value="06:30">
+                    </div>
+                    <div>
+                        <label>End Time</label>
+                        <input type="time" id="workEnd" value="22:00">
+                    </div>
+                </div>
+                <div class="settings-row">
+                    <div>
+                        <label>Target Slots</label>
+                        <input type="number" id="targetSlots" value="150" min="1" max="300">
+                    </div>
+                    <div>
+                        <label>Slot Duration (minutes)</label>
+                        <input type="number" id="slotDuration" value="5" min="1" max="60">
+                    </div>
+                </div>
+                <button class="save-note-btn" onclick="saveSettings()">Save Settings</button>
+            </div>
+
+            <div class="settings" style="margin-top: 20px;">
+                <h3>Data Management</h3>
+                <button class="export-btn" onclick="backupData()">Backup All Data</button>
+                <button class="stop-btn" onclick="clearAllData()">Clear All Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State and storage variables
+
+        // State and storage variables
+        let memoryStorage = {
+            settings: {
+                workStart: '06:30',
+                workEnd: '22:00',
+                targetSlots: 150,
+                slotDuration: 5
+            },
+            todayData: {
+                date: new Date().toDateString(),
+                sessions: [],
+                totalWorkTime: 0,
+                totalBreakTime: 0,
+                slotsCompleted: 0
+            },
+            history: []
+        };
+
+        // State variables
+        let isWorking = false;
+        let onBreak = false;
+        let sessionStartTime = null;
+        let breakStartTime = null;
+        let currentSession = null;
+        let updateInterval = null;
+
+        // Storage functions
+        function loadData() {
+            try {
+                const savedData = localStorage.getItem('slotTrackerData');
+                if (savedData) {
+                    const data = JSON.parse(savedData);
+                    memoryStorage = { ...memoryStorage, ...data };
+                }
+                
+                // Check if today's data is actually from today
+                if (memoryStorage.todayData.date !== new Date().toDateString()) {
+                    // Archive yesterday's data
+                    if (memoryStorage.todayData.sessions.length > 0) {
+                        memoryStorage.history.unshift({
+                            ...memoryStorage.todayData,
+                            archived: true
+                        });
+                    }
+                    // Reset for today
+                    memoryStorage.todayData = {
+                        date: new Date().toDateString(),
+                        sessions: [],
+                        totalWorkTime: 0,
+                        totalBreakTime: 0,
+                        slotsCompleted: 0
+                    };
+                    saveData();
+                }
+                
+                applySettings();
+            } catch (e) {
+                console.error('Error loading data:', e);
+            }
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('slotTrackerData', JSON.stringify(memoryStorage));
+            } catch (e) {
+                console.error('Error saving data:', e);
+            }
+        }
+
+        function applySettings() {
+            const settings = memoryStorage.settings;
+            document.getElementById('workStart').value = settings.workStart;
+            document.getElementById('workEnd').value = settings.workEnd;
+            document.getElementById('targetSlots').value = settings.targetSlots;
+            document.getElementById('slotDuration').value = settings.slotDuration;
+        }
+
+        function saveSettings() {
+            memoryStorage.settings = {
+                workStart: document.getElementById('workStart').value,
+                workEnd: document.getElementById('workEnd').value,
+                targetSlots: parseInt(document.getElementById('targetSlots').value),
+                slotDuration: parseInt(document.getElementById('slotDuration').value)
+            };
+            saveData();
+            updateDisplay();
+            alert('Settings saved successfully!');
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            // Load data for specific tabs
+            if (tabName === 'history') {
+                loadHistory();
+            }
+        }
+
+        function startWork() {
+            isWorking = true;
+            onBreak = false;
+            sessionStartTime = new Date();
+            currentSession = {
+                start: sessionStartTime.toISOString(),
+                type: 'work',
+                notes: ''
+            };
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('breakBtn').disabled = false;
+            document.getElementById('breakBtn').textContent = 'Take Break';
+            document.getElementById('currentStatus').textContent = 'Working';
+            
+            updateInterval = setInterval(updateDisplay, 1000);
+        }
+
+        function stopWork() {
+            if (currentSession) {
+                document.getElementById('sessionNotes').classList.add('show');
+                document.getElementById('notesInput').focus();
+            }
+        }
+
+        function saveSessionNote() {
+            if (currentSession) {
+                currentSession.end = new Date().toISOString();
+                currentSession.notes = document.getElementById('notesInput').value;
+                currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
+                
+                memoryStorage.todayData.sessions.push(currentSession);
+                
+                if (currentSession.type === 'work') {
+                    memoryStorage.todayData.totalWorkTime += currentSession.duration;
+                    memoryStorage.todayData.slotsCompleted = Math.floor(
+                        memoryStorage.todayData.totalWorkTime / memoryStorage.settings.slotDuration
+                    );
+                } else {
+                    memoryStorage.todayData.totalBreakTime += currentSession.duration;
+                }
+                
+                saveData();
+                currentSession = null;
+                document.getElementById('notesInput').value = '';
+                document.getElementById('sessionNotes').classList.remove('show');
+            }
+
+            isWorking = false;
+            onBreak = false;
+            sessionStartTime = null;
+            breakStartTime = null;
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('breakBtn').disabled = true;
+            document.getElementById('currentStatus').textContent = 'Idle';
+            
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+            
+            updateDisplay();
+            displayTodaySessions();
+        }
+
+        function toggleBreak() {
+            if (onBreak) {
+                // Resume work
+                breakStartTime = null;
+                onBreak = false;
+                document.getElementById('breakBtn').textContent = 'Take Break';
+                document.getElementById('currentStatus').textContent = 'Working';
+                
+                // Save the break session
+                if (currentSession && currentSession.type === 'break') {
+                    currentSession.end = new Date().toISOString();
+                    currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
+                    memoryStorage.todayData.sessions.push(currentSession);
+                    memoryStorage.todayData.totalBreakTime += currentSession.duration;
+                    saveData();
+                }
+                
+                // Start new work session
+                currentSession = {
+                    start: new Date().toISOString(),
+                    type: 'work',
+                    notes: ''
+                };
+            } else {
+                // Start break
+                breakStartTime = new Date();
+                onBreak = true;
+                document.getElementById('breakBtn').textContent = 'Resume Work';
+                document.getElementById('currentStatus').textContent = 'On Break';
+                
+                // Save current work session
+                if (currentSession && currentSession.type === 'work') {
+                    currentSession.end = new Date().toISOString();
+                    currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
+                    currentSession.notes = 'Auto-saved before break';
+                    memoryStorage.todayData.sessions.push(currentSession);
+                    memoryStorage.todayData.totalWorkTime += currentSession.duration;
+                    saveData();
+                }
+                
+                // Start break session
+                currentSession = {
+                    start: new Date().toISOString(),
+                    type: 'break',
+                    notes: 'Break'
+                };
+            }
+            
+            updateDisplay();
+            displayTodaySessions();
+        }
+
+        function updateDisplay() {
+            const now = new Date();
+            const settings = memoryStorage.settings;
+            
+            // Update slots
+            let currentWorkTime = memoryStorage.todayData.totalWorkTime;
+            if (isWorking && !onBreak && sessionStartTime) {
+                currentWorkTime += (now - sessionStartTime) / 1000 / 60;
+            }
+            
+            const slotsUsed = Math.floor(currentWorkTime / settings.slotDuration);
+            document.getElementById('slotsUsed').textContent = slotsUsed;
+            document.getElementById('slotsRemaining').textContent = settings.targetSlots - slotsUsed;
+            
+            // Update times
+            const workHours = Math.floor(currentWorkTime / 60);
+            const workMinutes = Math.floor(currentWorkTime % 60);
+            document.getElementById('timeWorked').textContent = `${workHours}:${workMinutes.toString().padStart(2, '0')}`;
+            
+            let currentBreakTime = memoryStorage.todayData.totalBreakTime;
+            if (onBreak && breakStartTime) {
+                currentBreakTime += (now - breakStartTime) / 1000 / 60;
+            }
+            
+            const breakHours = Math.floor(currentBreakTime / 60);
+            const breakMinutes = Math.floor(currentBreakTime % 60);
+            document.getElementById('breakTime').textContent = `${breakHours}:${breakMinutes.toString().padStart(2, '0')}`;
+            
+            // Calculate max possible slots
+            const [endHour, endMinute] = settings.workEnd.split(':').map(Number);
+            const endTime = new Date();
+            endTime.setHours(endHour, endMinute, 0);
+            
+            const remainingMs = Math.max(0, endTime - now);
+            const remainingMinutes = remainingMs / 1000 / 60;
+            const maxPossibleSlots = slotsUsed + Math.floor(remainingMinutes / settings.slotDuration);
+            document.getElementById('maxPossible').textContent = Math.min(maxPossibleSlots, 300);
+            
+            // Update progress
+            const progress = Math.min(100, (slotsUsed / settings.targetSlots) * 100);
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+            
+            // Show warning
+            const warningEl = document.getElementById('warning');
+            if (maxPossibleSlots < settings.targetSlots && slotsUsed < settings.targetSlots) {
+                warningEl.textContent = `⚠️ Warning: You can only complete ${maxPossibleSlots} slots today. You need ${settings.targetSlots - slotsUsed} more slots but only have time for ${maxPossibleSlots - slotsUsed}.`;
+                warningEl.classList.add('show');
+            } else {
+                warningEl.classList.remove('show');
+            }
+        }
+
+        function displayTodaySessions() {
+            const container = document.getElementById('todaySessions');
+            container.innerHTML = '';
+            
+            const sessions = [...memoryStorage.todayData.sessions].reverse();
+            sessions.forEach((session, index) => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                
+                const start = new Date(session.start);
+                const end = session.end ? new Date(session.end) : new Date();
+                const duration = Math.round(session.duration || ((end - start) / 1000 / 60));
+                
+                item.innerHTML = `
+                    <h4>Session ${sessions.length - index} - ${session.type === 'work' ? 'Work' : 'Break'}</h4>
+                    <p>Time: ${start.toLocaleTimeString()} - ${session.end ? end.toLocaleTimeString() : 'Ongoing'}</p>
+                    <p>Duration: ${duration} minutes (${Math.floor(duration / memoryStorage.settings.slotDuration)} slots)</p>
+                    ${session.notes ? `<div class="notes">${session.notes}</div>` : ''}
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        function loadHistory() {
+            const container = document.getElementById('historyList');
+            container.innerHTML = '';
+            
+            const allDays = [...memoryStorage.history];
+            if (memoryStorage.todayData.sessions.length > 0) {
+                allDays.unshift(memoryStorage.todayData);
+            }
+            
+            allDays.forEach(day => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                
+                const date = new Date(day.date);
+                const completion = Math.round((day.slotsCompleted / memoryStorage.settings.targetSlots) * 100);
+                
+                item.innerHTML = `
+                    <h4>${date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h4>
+                    <p>Slots Completed: ${day.slotsCompleted} / ${memoryStorage.settings.targetSlots} (${completion}%)</p>
+                    <p>Work Time: ${Math.floor(day.totalWorkTime / 60)}h ${Math.floor(day.totalWorkTime % 60)}m</p>
+                    <p>Break Time: ${Math.floor(day.totalBreakTime / 60)}h ${Math.floor(day.totalBreakTime % 60)}m</p>
+                    <p>Sessions: ${day.sessions.filter(s => s.type === 'work').length} work, ${day.sessions.filter(s => s.type === 'break').length} breaks</p>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        function exportToCSV(data, filename) {
+            let csv = 'Date,Session Type,Start Time,End Time,Duration (min),Slots,Notes\n';
+            
+            data.forEach(day => {
+                day.sessions.forEach(session => {
+                    const start = new Date(session.start);
+                    const end = session.end ? new Date(session.end) : new Date();
+                    const slots = Math.floor((session.duration || 0) / memoryStorage.settings.slotDuration);
+                    
+                    csv += `${day.date},${session.type},${start.toLocaleTimeString()},${end.toLocaleTimeString()},${Math.round(session.duration || 0)},${slots},"${session.notes || ''}"\n`;
+                });
+            });
+            
+            // Add summary
+            csv += '\n\nSummary\n';
+            csv += 'Date,Total Slots,Work Time (min),Break Time (min),Completion %\n';
+            
+            data.forEach(day => {
+                const completion = Math.round((day.slotsCompleted / memoryStorage.settings.targetSlots) * 100);
+                csv += `${day.date},${day.slotsCompleted},${Math.round(day.totalWorkTime)},${Math.round(day.totalBreakTime)},${completion}%\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function exportToday() {
+            exportToCSV([memoryStorage.todayData], `slot_tracker_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function exportWeek() {
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            
+            const weekData = memoryStorage.history.filter(day => 
+                new Date(day.date) >= weekAgo
+            );
+            
+            if (memoryStorage.todayData.sessions.length > 0) {
+                weekData.push(memoryStorage.todayData);
+            }
+            
+            exportToCSV(weekData, `slot_tracker_week_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function exportMonth() {
+            const monthAgo = new Date();
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            
+            const monthData = memoryStorage.history.filter(day => 
+                new Date(day.date) >= monthAgo
+            );
+            
+            if (memoryStorage.todayData.sessions.length > 0) {
+                monthData.push(memoryStorage.todayData);
+            }
+            
+            exportToCSV(monthData, `slot_tracker_month_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function exportAll() {
+            const allData = [...memoryStorage.history];
+            if (memoryStorage.todayData.sessions.length > 0) {
+                allData.push(memoryStorage.todayData);
+            }
+            
+            exportToCSV(allData, `slot_tracker_all_data_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function backupData() {
+            const backup = JSON.stringify(memoryStorage, null, 2);
+            const blob = new Blob([backup], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `slot_tracker_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This cannot be undone!')) {
+                memoryStorage = {
+                    settings: memoryStorage.settings,
+                    todayData: {
+                        date: new Date().toDateString(),
+                        sessions: [],
+                        totalWorkTime: 0,
+                        totalBreakTime: 0,
+                        slotsCompleted: 0
+                    },
+                    history: []
+                };
+                saveData();
+                updateDisplay();
+                displayTodaySessions();
+                alert('All data cleared successfully!');
+            }
+        }
+
+        function resetToday() {
+            if (confirm('Are you sure you want to reset today\'s data?')) {
+                memoryStorage.todayData = {
+                    date: new Date().toDateString(),
+                    sessions: [],
+                    totalWorkTime: 0,
+                    totalBreakTime: 0,
+                    slotsCompleted: 0
+                };
+                saveData();
+                updateDisplay();
+                displayTodaySessions();
+            }
+        }
+
+        // Initialize
+        loadData();
+        updateDisplay();
+        displayTodaySessions();
+        
+        // Update display every minute when idle
+        setInterval(() => {
+            if (!isWorking) {
+                updateDisplay();
+            }
+        }, 60000);
+    </script>
+</body>
+</html>
