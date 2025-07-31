@@ -587,6 +587,10 @@
             try {
                 if (!app) {
                     app = firebase.initializeApp(firebaseConfig);
+                    // Add this right after firebase.initializeApp
+                    firebase.database().ref('.info/connected').on('value', (snapshot) => {
+                    console.log('Firebase connected:', snapshot.val());
+                    });
                     database = firebase.database();
                 }
                 
