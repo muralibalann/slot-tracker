@@ -126,14 +126,15 @@
             <h3>Log New Expense</h3>
             <form id="expenseForm" class="form-grid">
                 <div class="form-group"><label for="expDate">Date</label><input type="date" id="expDate" required></div>
-                <div class="form-group"><label for="expAmount">Amount (GBP)</label><input type="number" id="expAmount" required min="0.01" step="0.01"></div>
+                <div class="form-group"><label for="expAmount">Amount</label><input type="number" id="expAmount" required min="0.01" step="0.01"></div>
+                <div class="form-group"><label for="expCurrency">Currency</label><select id="expCurrency"><option>USD</option><option>EUR</option><option>GBP</option><option>INR</option></select></div>
                 <div class="form-group"><label for="expCategory">Category</label><select id="expCategory"></select></div>
                 <div class="form-group" style="grid-column: 1 / -1;"><label for="expDesc">Description</label><textarea id="expDesc"></textarea></div>
                 <button type="submit" class="btn-blue" style="align-self: flex-end;">Add Expense</button>
             </form>
             <h3>All Expenses</h3>
             <table class="data-table">
-                <thead><tr><th>Date</th><th>Amount (GBP)</th><th>Category</th><th>Description</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Date</th><th>Amount</th><th>Category</th><th>Description</th><th>Actions</th></tr></thead>
                 <tbody id="expensesTableBody"></tbody>
             </table>
         </div>
@@ -164,8 +165,8 @@
         <div class="tab-content" id="settings-content" style="display: none;">
             <h3>Day Schedule</h3>
              <div class="form-grid">
-                <div class="form-group"><label for="dayStartTime">Day Start Time (Wake Up)</label><input type="time" id="dayStartTime" value="06:00"></div>
-                <div class="form-group"><label for="dayEndTime">Day End Time (Sleep)</label><input type="time" id="dayEndTime" value="22:00"></div>
+                <div class="form-group"><label for="dayStartTime">Day Start Time</label><input type="time" id="dayStartTime"></div>
+                <div class="form-group"><label for="dayEndTime">Day End Time</label><input type="time" id="dayEndTime"></div>
             </div>
             <h3>Categories & Targets</h3>
             <table class="data-table">
@@ -180,31 +181,14 @@
             </form>
         </div>
     </div>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
 <script>
 "use strict";
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Firebase Initialization ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
-        authDomain: "slot-tracker-c7ec1.firebaseapp.com",
-        databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
-        projectId: "slot-tracker-c7ec1",
-        storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
-        messagingSenderId: "639902490570",
-        appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    const userRef = database.ref('users/guest'); // Assuming guest user for now
-
     // --- APP STATE & CONFIG ---
     let appData = {};
     let activeSession = { id: null };
     let liveTimerInterval = null;
     let daySummaryInterval = null;
-
     // --- UTILITIES ---
     const utils = {
         generateId: () => `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
@@ -223,45 +207,46 @@ document.addEventListener('DOMContentLoaded', () => {
             return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         },
         getTodayDateString: () => new Date().toISOString().slice(0, 10),
-        calculateSleepHours: (startTime, endTime) => {
-            const start = new Date(`1970-01-01T${startTime}:00`);
-            let end = new Date(`1970-01-01T${endTime}:00`);
-            if (end <= start) end.setDate(end.getDate() + 1);
-            const diffMs = end - start;
-            return Math.round(diffMs / 3600000);
-        }
     };
-
-    // --- DATA PERSISTENCE with Firebase ---
+    // --- DATA PERSISTENCE ---
     function loadData() {
-        userRef.once('value', (snapshot) => {
-            appData = snapshot.val() || {
-                settings: {
-                    darkMode: false, userName: "guest", dayStartTime: "06:00", dayEndTime: "22:00",
-                    categories: {
-                        'MZ': { name: 'Mizuho Work', color: '#e53e3e', target: 4 },
-                        'GC': { name: 'Grand Cholas', color: '#dd6b20', target: 1 },
-                        'AI': { name: 'AI Projects', color: '#3182ce', target: 6 },
-                        'Fly': { name: 'Family', color: '#38a169', target: 1 },
-                        'Brk': { name: 'Break', color: '#d69e2e', target: 4 },
-                        'Slp': { name: 'Sleep', color: '#805ad5', target: 8 }
-                    }
-                },
-                sessions: {}, todos: [], expenses: []
-            };
-            updateSleepAndTargets();
-            const today = utils.getTodayDateString();
-            if (!appData.sessions[today]) appData.sessions[today] = [];
-            const savedSession = sessionStorage.getItem('activeTrackerSession');
-            if (savedSession) activeSession = JSON.parse(savedSession);
-            renderAll();
-        }, (error) => { console.error("Error loading data:", error); appData = { settings: { darkMode: false, userName: "guest", dayStartTime: "06:00", dayEndTime: "22:00", categories: {} }, sessions: {}, todos: [], expenses: [] }; renderAll(); });
+        const defaultData = {
+            settings: {
+                darkMode: false, userName: "guest", dayStartTime: "06:00", dayEndTime: "22:00",
+                categories: {
+                    'MZ': { name: 'Mizuho Work', color: '#e53e3e', target: 4 },
+                    'GC': { name: 'Grand Cholas', color: '#dd6b20', target: 1 },
+                    'AI': { name: 'AI Projects', color: '#3182ce', target: 6 },
+                    'Fly': { name: 'Family', color: '#38a169', target: 1 },
+                    'Brk': { name: 'Break', color: '#d69e2e', target: 4 },
+                    'Slp': { name: 'Sleep', color: '#805ad5', target: 8 },
+                }
+            },
+            sessions: {}, todos: [], expenses: []
+        };
+        try {
+            const savedData = localStorage.getItem('personalTrackerData_v6');
+            appData = savedData ? JSON.parse(savedData) : defaultData;
+            appData.settings = {...defaultData.settings, ...appData.settings};
+            appData.settings.categories = {...defaultData.settings.categories, ...appData.settings.categories};
+        } catch (error) { console.error("Error loading data:", error); appData = defaultData; }
+       
+        if (appData.settings.categories['Slp']) {
+            appData.settings.categories['Slp'].target = 8;
+        }
+        const today = utils.getTodayDateString();
+        if (!appData.sessions[today]) appData.sessions[today] = [];
+       
+        const savedSession = sessionStorage.getItem('activeTrackerSession');
+        if (savedSession) {
+            activeSession = JSON.parse(savedSession);
+        }
     }
-
     function saveData() {
-        userRef.set(appData, (error) => { if (error) console.error("Error saving data:", error); });
+        try {
+            localStorage.setItem('personalTrackerData_v6', JSON.stringify(appData));
+        } catch (error) { console.error("Error saving data:", error); }
     }
-
     // --- RENDERING ---
     function renderAll() {
         renderChrome();
@@ -282,16 +267,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
    
     function renderDaySummary() {
-        const { dayEndTime, dayStartTime } = appData.settings;
+        const { dayEndTime } = appData.settings;
         const now = new Date();
-        const start = new Date(`${utils.getTodayDateString()}T${dayStartTime}`);
         const end = new Date(`${utils.getTodayDateString()}T${dayEndTime}`);
-        if (now < start || now > end) {
-            if (now < start) start.setDate(start.getDate() - 1);
-            if (now > end) end.setDate(end.getDate() + 1);
-        }
-        const remainingMs = end - now;
-        const remainingMins = Math.max(0, Math.round(remainingMs / 60000));
+        const remainingMins = (end - now) / 60000;
         document.getElementById('timeRemainingToday').textContent = remainingMins > 0 ? utils.formatTime(remainingMins, true) : "Day Over";
         const today = utils.getTodayDateString();
         const sessionsToday = appData.sessions[today] || [];
@@ -305,13 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const unfinishedTodos = appData.todos.filter(t => !t.completed).length;
         document.getElementById('unfinishedTodosCount').textContent = unfinishedTodos;
     }
-
     function renderProgressTable() {
         const today = utils.getTodayDateString();
         const sessionsToday = appData.sessions[today] || [];
         const categories = appData.settings.categories;
         const categoryTotals = Object.keys(categories).reduce((acc, code) => ({...acc, [code]: 0}), {});
-        sessionsToday.forEach(s => { if (categoryTotals[s.type] !== undefined) categoryTotals[s.type] += s.duration; });
+        sessionsToday.forEach(s => { if(categoryTotals[s.type] !== undefined) categoryTotals[s.type] += s.duration; });
         const tableBody = document.getElementById('progressTableBody');
         tableBody.innerHTML = '';
         let totalTarget = 0, totalActual = 0;
@@ -357,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
             logBody.appendChild(row);
         });
     }
-
     function renderSettings() {
         const settingsBody = document.getElementById('categorySettingsBody');
         settingsBody.innerHTML = '';
@@ -365,24 +342,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const cat = appData.settings.categories[code];
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td><input type="text" class="setting-input" data-code="${code}" data-field="name" value="${cat.name}" ${code === 'Slp' ? 'disabled' : ''}></td>
+                <td><input type="text" class="setting-input" data-code="${code}" data-field="name" value="${cat.name}"></td>
                 <td>${code}</td>
-                <td><input type="color" class="setting-input" data-code="${code}" data-field="color" value="${cat.color}" ${code === 'Slp' ? 'disabled' : ''}></td>
-                <td><input type="number" class="setting-input" data-code="${code}" data-field="target" value="${cat.target}" min="0" step="0.5" ${code === 'Slp' ? 'disabled' : ''}></td>
-                <td><button class="btn-icon" data-action="delete-category" data-code="${code}" ${code === 'Slp' ? 'disabled' : ''}>🗑️</button></td>
+                <td><input type="color" class="setting-input" data-code="${code}" data-field="color" value="${cat.color}"></td>
+                <td><input type="number" class="setting-input" data-code="${code}" data-field="target" value="${cat.target}" min="0" step="0.5"></td>
+                <td><button class="btn-icon" data-action="delete-category" data-code="${code}">🗑️</button></td>
             `;
             settingsBody.appendChild(row);
         });
         document.getElementById('dayStartTime').value = appData.settings.dayStartTime;
         document.getElementById('dayEndTime').value = appData.settings.dayEndTime;
     }
-
     function renderTodos() {
         const todoBody = document.getElementById('todosTableBody');
         todoBody.innerHTML = '';
-        const filter = document.getElementById('todoCategoryFilter').value;
         appData.todos.forEach(todo => {
-            if (filter && todo.category !== filter && filter !== '') return;
             const cat = appData.settings.categories[todo.category];
             const row = document.createElement('tr');
             row.className = todo.completed ? 'task-completed' : '';
@@ -408,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${exp.date}</td>
-                <td>£${exp.amount.toFixed(2)}</td>
+                <td>${exp.currency} ${exp.amount.toFixed(2)}</td>
                 <td>${exp.category}</td>
                 <td>${exp.description}</td>
                 <td><button class="btn-icon" data-action="delete-expense" data-id="${exp.id}">🗑️</button></td>
@@ -430,10 +404,12 @@ document.addEventListener('DOMContentLoaded', () => {
             div.className = 'history-day';
             div.innerHTML = `<div class="history-header">${new Date(date).toDateString()} - Total: ${utils.formatTime(totalMins, true)}</div><div class="history-content"></div>`;
             container.appendChild(div);
+            // Add logic to toggle content and render progress/log for the day if clicked
             div.querySelector('.history-header').addEventListener('click', () => {
                 const content = div.querySelector('.history-content');
                 content.style.display = content.style.display === 'block' ? 'none' : 'block';
                 if (content.innerHTML === '') {
+                    // Render progress and log for this day (similar to today but for date)
                     content.innerHTML = '<h4>Progress</h4><table class="data-table"><tbody id="histProgress"></tbody></table><h4>Sessions</h4><table class="data-table"><tbody id="histLog"></tbody></table>';
                     const histProgress = content.querySelector('#histProgress');
                     const categories = appData.settings.categories;
@@ -472,7 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-
     function renderSelectors() {
         const catSelects = [document.getElementById('categorySelect'), document.getElementById('todoCategory'), document.getElementById('todoCategoryFilter'), document.getElementById('expCategory')];
         catSelects.forEach(select => {
@@ -485,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
+   
     // --- SESSION MANAGEMENT ---
     function startSession(categoryCode, todoId = null) {
         if (activeSession.id) return alert("A session is already running.");
@@ -494,7 +469,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSessionControlsUI();
         liveTimerInterval = setInterval(updateLiveTimer, 1000);
     }
-
     function pauseSession(isPausing) {
         if (!activeSession.id) return;
         if (isPausing && !activeSession.pausedTime) {
@@ -508,13 +482,11 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStorage.setItem('activeTrackerSession', JSON.stringify(activeSession));
         updateSessionControlsUI();
     }
-
     function stopSession() {
         if (!activeSession.id) return;
         pauseSession(true);
         saveAndEndSession();
     }
-
     function saveAndEndSession() {
         const endTime = Date.now();
         const durationMs = endTime - activeSession.startTime - activeSession.totalPausedDuration;
@@ -551,7 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
             pauseBtn.classList.toggle('btn-yellow', !isPaused);
         }
     }
-
     function updateLiveTimer() {
         if (!activeSession.id || activeSession.pausedTime) return;
         const elapsedSeconds = (Date.now() - activeSession.startTime - activeSession.totalPausedDuration) / 1000;
@@ -560,6 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
    
     // --- EVENT LISTENERS ---
     function setupEventListeners() {
+        // FIXED: Central event listener for all clicks
         document.addEventListener('click', e => {
             const target = e.target;
             if (target.matches('.tab')) {
@@ -581,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderSessionLog();
                 renderProgressTable();
             } else if (action === 'delete-category') {
-                if (code !== 'Slp' && confirm('Are you sure you want to delete this category?')) {
+                if (confirm('Are you sure you want to delete this category?')) {
                     delete appData.settings.categories[code];
                     saveData();
                     renderAll();
@@ -618,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('todoForm').addEventListener('submit', e => {
             e.preventDefault();
             const title = document.getElementById('todoTitle').value.trim();
-            if (!title) return alert("Title is required for a to-do task.");
+            if(!title) return alert("Title is required for a to-do task.");
             appData.todos.push({
                 id: utils.generateId(), title,
                 category: document.getElementById('todoCategory').value,
@@ -638,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 id: utils.generateId(),
                 date: document.getElementById('expDate').value,
                 amount,
+                currency: document.getElementById('expCurrency').value,
                 category: document.getElementById('expCategory').value,
                 description: document.getElementById('expDesc').value.trim(),
             });
@@ -651,56 +624,35 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = document.getElementById('newCatName').value.trim();
             const code = document.getElementById('newCatCode').value.trim().toUpperCase();
             const color = document.getElementById('newCatColor').value;
-            if (name && code && !appData.settings.categories[code] && code !== 'Slp') {
+            if (name && code && !appData.settings.categories[code]) {
                 appData.settings.categories[code] = { name, color, target: 0 };
                 saveData();
                 renderAll();
                 e.target.reset();
             } else {
-                alert('Invalid name/code or code already exists (Sleep category is fixed).');
+                alert('Invalid name/code or code already exists.');
             }
         });
         document.getElementById('settings-content').addEventListener('change', e => {
             if (e.target.matches('.setting-input')) {
                 const { code, field } = e.target.dataset;
-                if (code !== 'Slp') {
-                    const value = e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value;
-                    appData.settings.categories[code][field] = value;
-                    updateSleepAndTargets();
-                    saveData();
-                    renderAll();
-                }
+                const value = e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value;
+                appData.settings.categories[code][field] = value;
+                saveData();
+                renderAll();
             } else if (e.target.id === 'dayStartTime' || e.target.id === 'dayEndTime') {
                 appData.settings[e.target.id] = e.target.value;
-                updateSleepAndTargets();
                 saveData();
                 renderDaySummary();
-                renderProgressTable();
             }
         });
         document.getElementById('todoCategoryFilter').addEventListener('change', renderTodos);
     }
-
-    // --- Sleep and Target Updates ---
-    function updateSleepAndTargets() {
-        const { dayStartTime, dayEndTime, categories } = appData.settings;
-        const sleepHours = utils.calculateSleepHours(dayStartTime, dayEndTime);
-        categories['Slp'] = { name: 'Sleep', color: '#805ad5', target: sleepHours };
-        const totalAwakeHours = 24 - sleepHours;
-        const otherCategories = Object.keys(categories).filter(code => code !== 'Slp');
-        const totalOtherTargets = otherCategories.reduce((sum, code) => sum + (categories[code].target || 0), 0);
-        if (totalOtherTargets > totalAwakeHours) {
-            const factor = totalAwakeHours / totalOtherTargets;
-            otherCategories.forEach(code => {
-                categories[code].target = (categories[code].target || 0) * factor;
-            });
-        }
-    }
-
     // --- INITIALIZATION ---
     loadData();
-    setupEventListeners();
-    if (activeSession.id) {
+    renderAll();
+    setupEventListeners(); // Call the fixed event listener setup
+    if(activeSession.id) {
         updateSessionControlsUI();
         liveTimerInterval = setInterval(updateLiveTimer, 1000);
     }
