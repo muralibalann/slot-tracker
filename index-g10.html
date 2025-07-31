@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Personal Tracker</title>
+    <meta name="theme-color" content="#4A5568">
+    <style>
+        :root {
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --primary-light: #4299e1; --primary-dark: #63b3ed;
+            --bg-light: #f7fafc;      --bg-dark: #1a202c;
+            --card-light: #ffffff;    --card-dark: #2d3748;
+            --text-light: #2d3748;    --text-dark: #e2e8f0;
+            --border-light: #e2e8f0;  --border-dark: #4a5568;
+            --green: #48bb78; --red: #f56565; --yellow: #ecc94b; --blue: #4299e1;
+        }
+        body { font-family: var(--font-sans); margin: 0; padding: 10px 20px; background-color: var(--bg-light); color: var(--text-light); transition: background-color 0.3s, color 0.3s; }
+        body.dark-mode { background-color: var(--bg-dark); color: var(--text-dark); }
+        .container { max-width: 1200px; margin: 0 auto; background-color: var(--card-light); border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); padding: 25px; transition: background-color 0.3s; }
+        body.dark-mode .container { background-color: var(--card-dark); }
+        h1, h2, h3 { color: inherit; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; }
+        body.dark-mode h1, body.dark-mode h2, body.dark-mode h3 { border-color: var(--border-dark); }
+        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+        .tabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        button, .button { padding: 10px 15px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; font-size: 0.9rem; }
+        .tab { background: transparent; color: #718096; }
+        body.dark-mode .tab { color: #a0aec0; }
+        .tab.active { background-color: var(--primary-light); color: white; }
+        body.dark-mode .tab.active { background-color: var(--primary-dark); }
+        .btn-green { background: var(--green); color: white; } .btn-red { background: var(--red); color: white; } .btn-yellow { background: var(--yellow); color: #1a202c; } .btn-blue { background: var(--blue); color: white; }
+        .btn-icon { background: transparent; padding: 5px; font-size: 1.2rem; border: none; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .data-table th, .data-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-light); }
+        body.dark-mode .data-table th, body.dark-mode .data-table td { border-color: var(--border-dark); }
+        .data-table th { background-color: #edf2f7; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        body.dark-mode .data-table th { background-color: #2d3748; }
+        .progress-bar-container { width: 100%; background-color: #edf2f7; border-radius: 10px; height: 16px; overflow: hidden; position: relative; }
+        body.dark-mode .progress-bar-container { background-color: #4a5568; }
+        .progress-bar { height: 100%; transition: width 0.5s ease-in-out; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 1rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+        input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid var(--border-light); background-color: #fff; color: var(--text-light); }
+        body.dark-mode input, body.dark-mode select, body.dark-mode textarea { border-color: var(--border-dark); background-color: #2d3748; color: var(--text-dark); }
+        #session-controls { display: flex; gap: 10px; align-items: center; }
+        #live-timer { font-size: 1.2rem; font-weight: bold; margin-left: auto; color: var(--green); }
+        .day-summary-panel { display: flex; justify-content: space-around; background-color: #edf2f7; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center; flex-wrap: wrap; gap: 1rem;}
+        body.dark-mode .day-summary-panel { background-color: #2d3748; }
+        .summary-item h4 { margin: 0 0 0.25rem 0; font-size: 0.9rem; color: #718096; }
+        body.dark-mode .summary-item h4 { color: #a0aec0; }
+        .summary-item p { margin: 0; font-size: 1.5rem; font-weight: bold; }
+        .task-completed { text-decoration: line-through; opacity: 0.6; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header-controls">
+            <h1>Personal Dashboard</h1>
+            <div class="user-controls" style="display:flex; align-items:center; gap:15px;">
+                <span id="userName">User: guest</span>
+                <button id="darkModeToggle">🌙</button>
+            </div>
+        </div>
+        <div class="tabs">
+            <button class="tab active" data-tab="today">Today</button>
+            <button class="tab" data-tab="expenses">Expenses</button>
+            <button class="tab" data-tab="todos">To-Do</button>
+            <button class="tab" data-tab="settings">Settings</button>
+        </div>
+
+        <div class="tab-content active" id="today-content">
+             <div class="day-summary-panel">
+                <div class="summary-item">
+                    <h4>Waking Hours Today</h4>
+                    <p id="wakingHoursToday">-</p>
+                </div>
+                <div class="summary-item">
+                    <h4>Time Remaining in Day</h4>
+                    <p id="timeRemainingToday">-</p>
+                </div>
+            </div>
+            <div class="form-grid" style="align-items: center;">
+                <div id="session-controls">
+                    <select id="categorySelect"></select>
+                    <button class="btn-green" id="startBtn">Start</button>
+                    <button class="btn-yellow" id="pauseBtn" style="display: none;">Pause</button>
+                    <button class="btn-red" id="stopBtn" style="display: none;">Stop</button>
+                </div>
+                 <span id="live-timer"></span>
+            </div>
+            <h3>Today's Progress</h3>
+            <table class="data-table">
+                <thead><tr><th>Category</th><th>Target</th><th>Actual</th><th>Remaining</th><th style="width: 25%;">Progress</th></tr></thead>
+                <tbody id="progressTableBody"></tbody>
+                <tfoot><tr style="font-weight: bold;"><td colspan="1">Total</td><td id="totalTarget"></td><td id="totalActual"></td><td id="totalRemaining"></td><td></td></tr></tfoot>
+            </table>
+            <h3 style="margin-top: 2rem;">Today's Sessions Log</h3>
+            <table class="data-table">
+                <thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Category</th><th>Notes</th></tr></thead>
+                <tbody id="sessionLogBody"></tbody>
+            </table>
+        </div>
+        
+        <div class="tab-content" id="expenses-content" style="display: none;">
+            <h3>Log New Expense</h3>
+            <form id="expenseForm" class="form-grid">
+                <div class="form-group"><label for="expDate">Date</label><input type="date" id="expDate" required></div>
+                <div class="form-group"><label for="expAmount">Amount (£)</label><input type="number" id="expAmount" required min="0.01" step="0.01"></div>
+                <div class="form-group"><label for="expCategory">Category</label><select id="expCategory"></select></div>
+                <div class="form-group" style="grid-column: 1 / -1;"><label for="expDesc">Description</label><textarea id="expDesc"></textarea></div>
+                <button type="submit" class="btn-blue" style="align-self: flex-end;">Add Expense</button>
+            </form>
+            <h3>All Expenses</h3>
+            <table class="data-table">
+                <thead><tr><th>Date</th><th>Amount (£)</th><th>Category</th><th>Description</th><th>Actions</th></tr></thead>
+                <tbody id="expensesTableBody"></tbody>
+            </table>
+        </div>
+        
+        <div class="tab-content" id="todos-content" style="display: none;">
+            <div class="form-grid">
+                <div><h3>Add New To-Do Task</h3></div>
+                <div class="form-group" style="align-self: flex-end;">
+                     <label for="todoCategoryFilter">Filter by Category</label>
+                     <select id="todoCategoryFilter"></select>
+                </div>
+            </div>
+            <form id="todoForm" class="form-grid">
+                 <div class="form-group" style="grid-column: 1 / -1;"><label for="todoTitle">Title</label><input type="text" id="todoTitle" required></div>
+                 <div class="form-group"><label for="todoCategory">Category</label><select id="todoCategory"></select></div>
+                 <div class="form-group"><label for="todoPriority">Priority</label><select id="todoPriority"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+                 <div class="form-group"><label for="todoDueDate">Due Date</label><input type="date" id="todoDueDate"></div>
+                 <button type="submit" class="btn-blue" style="align-self: flex-end;">Add Task</button>
+            </form>
+             <h3>To-Do List</h3>
+            <table class="data-table">
+                <thead><tr><th>Status</th><th>Title</th><th>Category</th><th>Priority</th><th>Due</th><th>Actions</th></tr></thead>
+                <tbody id="todosTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="tab-content" id="settings-content" style="display: none;">
+            <h3>Day & Sleep Schedule</h3>
+            <p>Set your planned sleep times. This will automatically log an 8-hour sleep session for the previous night and adjust your new day's available time accordingly.</p>
+             <div class="form-grid">
+                <div class="form-group"><label for="bedTime">Planned Bed Time (e.g., 22:00)</label><input type="time" id="bedTime"></div>
+                <div class="form-group"><label for="wakeUpTime">Planned Wake Up Time (e.g., 06:00)</label><input type="time" id="wakeUpTime"></div>
+            </div>
+
+            <h3>Category Targets for Waking Hours</h3>
+            <table class="data-table">
+                 <thead><tr><th>Category</th><th>Color</th><th>Target (Hours)</th></tr></thead>
+                 <tbody id="categorySettingsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+"use strict";
+document.addEventListener('DOMContentLoaded', () => {
+    let appData = {};
+    let activeSession = { id: null };
+    let liveTimerInterval = null;
+    let daySummaryInterval = null;
+
+    const utils = {
+        generateId: () => `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        formatTime: (totalMinutes, compact = false) => {
+            if (isNaN(totalMinutes) || totalMinutes < 0) return '0h 0m';
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = Math.floor(totalMinutes % 60);
+            if (compact) return `${hours}h ${minutes}m`;
+            return `${hours}h ${minutes}m`;
+        },
+        formatTimer: (totalSeconds) => {
+            totalSeconds = Math.max(0, Math.floor(totalSeconds));
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        },
+        getTodayDateString: () => new Date().toISOString().slice(0, 10),
+        getYesterdayDateString: () => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            return yesterday.toISOString().slice(0, 10);
+        }
+    };
+
+    function loadData() {
+        const defaultData = {
+            settings: {
+                darkMode: false, userName: "guest", bedTime: "22:00", wakeUpTime: "06:00",
+                categories: {
+                    'MZ': { name: 'Mizuho Work', color: '#e53e3e', targetRatio: 0.25 },
+                    'GC': { name: 'Grand Cholas', color: '#dd6b20', targetRatio: 0.0625 },
+                    'AI': { name: 'AI Projects', color: '#3182ce', targetRatio: 0.375 },
+                    'Fly': { name: 'Family', color: '#38a169', targetRatio: 0.0625 },
+                    'Brk': { name: 'Break', color: '#d69e2e', targetRatio: 0.25 },
+                    'Slp': { name: 'Sleep', color: '#805ad5', targetRatio: 0 }, // Sleep is handled separately
+                },
+                lastSleepLogDate: null
+            },
+            sessions: {}, todos: [], expenses: []
+        };
+        try {
+            const savedData = localStorage.getItem('personalTrackerData_v7');
+            appData = savedData ? JSON.parse(savedData) : defaultData;
+            appData.settings = {...defaultData.settings, ...appData.settings};
+            appData.settings.categories = {...defaultData.settings.categories, ...appData.settings.categories};
+        } catch (error) { console.error("Error loading data:", error); appData = defaultData; }
+        
+        const today = utils.getTodayDateString();
+        if (!appData.sessions[today]) appData.sessions[today] = [];
+        
+        const savedSession = sessionStorage.getItem('activeTrackerSession');
+        if (savedSession) activeSession = JSON.parse(savedSession);
+    }
+
+    function saveData() {
+        try {
+            localStorage.setItem('personalTrackerData_v7', JSON.stringify(appData));
+        } catch (error) { console.error("Error saving data:", error); }
+    }
+
+    function autoLogSleepAndAdjustTargets() {
+        const today = utils.getTodayDateString();
+        if (appData.settings.lastSleepLogDate === today) return;
+
+        const yesterday = utils.getYesterdayDateString();
+        if (!appData.sessions[yesterday]) appData.sessions[yesterday] = [];
+        
+        const hasSleepSession = appData.sessions[yesterday].some(s => s.type === 'Slp');
+        if (!hasSleepSession) {
+            const sleepDurationMins = 8 * 60;
+            const bedTime = new Date(`${yesterday}T${appData.settings.bedTime}`);
+            const wakeUpTime = new Date(`${today}T${appData.settings.wakeUpTime}`);
+
+            appData.sessions[yesterday].push({
+                id: utils.generateId(),
+                startTime: bedTime.getTime(),
+                endTime: wakeUpTime.getTime(),
+                duration: sleepDurationMins,
+                type: 'Slp',
+                notes: 'Auto-logged sleep session'
+            });
+
+            const wakingHours = 24 - (sleepDurationMins / 60);
+            Object.keys(appData.settings.categories).forEach(code => {
+                if (code !== 'Slp') {
+                    const cat = appData.settings.categories[code];
+                    cat.target = wakingHours * cat.targetRatio;
+                } else {
+                    appData.settings.categories.Slp.target = sleepDurationMins / 60;
+                }
+            });
+        }
+        
+        appData.settings.lastSleepLogDate = today;
+        saveData();
+    }
+    
+    function renderAll() {
+        renderChrome();
+        renderDaySummary();
+        renderProgressTable();
+        renderSessionLog();
+        renderSettings();
+        renderTodos();
+        renderExpenses();
+        renderSelectors();
+    }
+
+    function renderDaySummary() {
+        const { wakeUpTime, bedTime } = appData.settings;
+        const now = new Date();
+        const wake = new Date(`${utils.getTodayDateString()}T${wakeUpTime}`);
+        const bed = new Date(`${utils.getTodayDateString()}T${bedTime}`);
+
+        const wakingDurationMins = (bed - wake) / 60000;
+        document.getElementById('wakingHoursToday').textContent = utils.formatTime(wakingDurationMins, true);
+
+        const remainingMins = (bed - now) / 60000;
+        document.getElementById('timeRemainingToday').textContent = remainingMins > 0 ? utils.formatTime(remainingMins, true) : "Day Over";
+    }
+
+    function renderProgressTable() {
+        const today = utils.getTodayDateString();
+        const sessionsToday = appData.sessions[today] || [];
+        const categories = appData.settings.categories;
+        const categoryTotals = Object.keys(categories).reduce((acc, code) => ({...acc, [code]: 0}), {});
+        sessionsToday.forEach(s => { if(categoryTotals[s.type] !== undefined) categoryTotals[s.type] += s.duration; });
+        const tableBody = document.getElementById('progressTableBody');
+        tableBody.innerHTML = '';
+        let totalTarget = 0, totalActual = 0;
+        Object.keys(categories).forEach(code => {
+            if (code === 'Slp') return;
+            const cat = categories[code];
+            const targetMins = (cat.target || 0) * 60;
+            const actualMins = categoryTotals[code] || 0;
+            totalTarget += targetMins;
+            totalActual += actualMins;
+            const remainingMins = targetMins - actualMins;
+            const progress = targetMins > 0 ? (actualMins / targetMins) * 100 : 0;
+            const overage = actualMins > targetMins;
+            tableBody.innerHTML += `
+                <tr>
+                    <td><strong style="color:${cat.color};">${cat.name}</strong></td>
+                    <td>${utils.formatTime(targetMins, true)}</td>
+                    <td>${utils.formatTime(actualMins, true)}</td>
+                    <td style="color:${overage ? 'var(--red)' : 'inherit'};">${overage ? 'Over by ' : ''}${utils.formatTime(Math.abs(remainingMins), true)}</td>
+                    <td><div class="progress-bar-container"><div class="progress-bar" style="width: ${Math.min(100, progress)}%; background-color:${overage ? 'var(--red)' : cat.color};"></div></div></td>
+                </tr>`;
+        });
+        document.getElementById('totalTarget').textContent = utils.formatTime(totalTarget, true);
+        document.getElementById('totalActual').textContent = utils.formatTime(totalActual, true);
+        document.getElementById('totalRemaining').textContent = utils.formatTime(Math.max(0, totalTarget - totalActual), true);
+    }
+    
+    function renderSessionLog() {
+        const today = utils.getTodayDateString();
+        const logBody = document.getElementById('sessionLogBody');
+        logBody.innerHTML = '';
+        [...(appData.sessions[today] || [])].forEach(s => {
+            const cat = appData.settings.categories[s.type];
+            logBody.innerHTML += `
+                <tr>
+                    <td>${new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td>${new Date(s.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td>${utils.formatTime(s.duration, true)}</td>
+                    <td style="color:${cat?.color || '#ccc'}; font-weight: bold;">${cat?.name || 'Deleted'}</td>
+                    <td>${s.notes || '-'}</td>
+                </tr>`;
+        });
+    }
+
+    function renderSettings() {
+        document.getElementById('bedTime').value = appData.settings.bedTime;
+        document.getElementById('wakeUpTime').value = appData.settings.wakeUpTime;
+        const settingsBody = document.getElementById('categorySettingsBody');
+        settingsBody.innerHTML = '';
+        let totalRatio = 0;
+        Object.keys(appData.settings.categories).forEach(code => {
+            if(code !== 'Slp') totalRatio += appData.settings.categories[code].targetRatio;
+        });
+
+        Object.keys(appData.settings.categories).forEach(code => {
+            if (code === 'Slp') return;
+            const cat = appData.settings.categories[code];
+            const currentPercentage = ((cat.targetRatio / totalRatio) * 100).toFixed(1);
+            settingsBody.innerHTML += `
+                <tr>
+                    <td><strong style="color:${cat.color};">${cat.name}</strong></td>
+                    <td><input type="color" class="setting-input" data-field="color" data-code="${code}" value="${cat.color}"></td>
+                    <td>
+                        <input type="range" class="setting-input" data-field="targetRatio" data-code="${code}" value="${cat.targetRatio}" min="0" max="1" step="0.01">
+                        <span>${currentPercentage}%</span>
+                    </td>
+                </tr>`;
+        });
+    }
+
+    function renderTodos() {
+        const todoBody = document.getElementById('todosTableBody');
+        const filter = document.getElementById('todoCategoryFilter').value;
+        const filteredTodos = appData.todos.filter(todo => filter === 'all' || todo.category === filter);
+        todoBody.innerHTML = '';
+        filteredTodos.forEach(todo => {
+            const cat = appData.settings.categories[todo.category];
+            todoBody.innerHTML += `
+                <tr class="${todo.completed ? 'task-completed' : ''}">
+                    <td><input type="checkbox" data-action="toggle-todo" data-id="${todo.id}" ${todo.completed ? 'checked' : ''}></td>
+                    <td>${todo.title}</td>
+                    <td style="color:${cat?.color || '#ccc'}; font-weight:bold;">${cat?.name || 'Deleted'}</td>
+                    <td class="priority-${todo.priority}">${todo.priority}</td>
+                    <td>${todo.dueDate || '-'}</td>
+                    <td>
+                        <button class="btn-green" data-action="start-todo-session" data-id="${todo.id}" ${todo.completed ? 'disabled' : ''}>▶️</button>
+                        <button class="btn-icon" data-action="delete-todo" data-id="${todo.id}">🗑️</button>
+                    </td>
+                </tr>`;
+        });
+    }
+    
+    function renderExpenses() {
+        const expenseBody = document.getElementById('expensesTableBody');
+        expenseBody.innerHTML = '';
+        [...appData.expenses].reverse().forEach(exp => {
+            expenseBody.innerHTML += `
+                <tr>
+                    <td>${exp.date}</td>
+                    <td>${exp.amount.toFixed(2)}</td>
+                    <td>${exp.category}</td>
+                    <td>${exp.description}</td>
+                    <td><button class="btn-icon" data-action="delete-expense" data-id="${exp.id}">🗑️</button></td>
+                </tr>`;
+        });
+    }
+
+    function renderSelectors() {
+        const selects = ['categorySelect', 'todoCategory', 'expCategory', 'todoCategoryFilter'];
+        const allCategoriesOption = `<option value="all">All Categories</option>`;
+        selects.forEach(id => {
+            const select = document.getElementById(id);
+            if (!select) return;
+            const currentVal = select.value;
+            let optionsHTML = '';
+            if (id === 'todoCategoryFilter') optionsHTML += allCategoriesOption;
+            Object.keys(appData.settings.categories).forEach(code => {
+                if(code === 'Slp' && id !== 'expCategory') return;
+                const cat = appData.settings.categories[code];
+                optionsHTML += `<option value="${code}">${cat.name}</option>`;
+            });
+            if (id === 'expCategory') optionsHTML += `<option value="Other">Other</option>`;
+            select.innerHTML = optionsHTML;
+            select.value = currentVal;
+        });
+    }
+    
+    function startSession(categoryCode, todoId = null) {
+        if (activeSession.id) return alert("A session is already running.");
+        activeSession = { id: utils.generateId(), startTime: Date.now(), pausedTime: null, totalPausedDuration: 0, type: categoryCode, todoId };
+        sessionStorage.setItem('activeTrackerSession', JSON.stringify(activeSession));
+        updateSessionControlsUI();
+        liveTimerInterval = setInterval(updateLiveTimer, 1000);
+    }
+
+    function stopSession() {
+        if (!activeSession.id) return;
+        const endTime = Date.now();
+        const durationMs = endTime - (activeSession.startTime + activeSession.totalPausedDuration);
+        const durationMins = Math.round(durationMs / 60000);
+        if (durationMins > 0) {
+            const today = utils.getTodayDateString();
+            appData.sessions[today].push({
+                id: activeSession.id, startTime: activeSession.startTime, endTime,
+                duration: durationMins, type: activeSession.type,
+                notes: `Session for ${appData.settings.categories[activeSession.type]?.name || 'a task'}.`,
+            });
+            saveData();
+        }
+        clearInterval(liveTimerInterval);
+        activeSession = { id: null };
+        sessionStorage.removeItem('activeTrackerSession');
+        updateSessionControlsUI();
+        renderAll();
+    }
+    
+    function setupEventListeners() {
+        document.addEventListener('click', e => {
+            const target = e.target;
+            if (target.matches('.tab')) {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                target.classList.add('active');
+                document.getElementById(`${target.dataset.tab}-content`).style.display = 'block';
+                return;
+            }
+            const action = target.dataset.action;
+            if(!action) return;
+            // Simplified handlers
+            if (action === 'toggle-todo' || action === 'delete-todo') {
+                const id = target.dataset.id;
+                if(action === 'toggle-todo') {
+                    const todo = appData.todos.find(t => t.id === id);
+                    if(todo) todo.completed = target.checked;
+                } else {
+                    appData.todos = appData.todos.filter(t => t.id !== id);
+                }
+                saveData();
+                renderTodos();
+            }
+        });
+        
+        document.getElementById('darkModeToggle').addEventListener('click', () => {
+            appData.settings.darkMode = !appData.settings.darkMode;
+            saveData(); renderChrome();
+        });
+
+        document.getElementById('startBtn').addEventListener('click', () => startSession(document.getElementById('categorySelect').value));
+        document.getElementById('stopBtn').addEventListener('click', stopSession);
+        
+        document.getElementById('todoForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const title = document.getElementById('todoTitle').value.trim();
+            if(!title) return alert("Title is required.");
+            appData.todos.push({
+                id: utils.generateId(), title,
+                category: document.getElementById('todoCategory').value,
+                priority: document.getElementById('todoPriority').value,
+                dueDate: document.getElementById('todoDueDate').value || null,
+                completed: false,
+            });
+            saveData();
+            renderTodos();
+            e.target.reset();
+        });
+
+        document.getElementById('expenseForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('expAmount').value);
+            if (amount <= 0 || isNaN(amount)) return alert("Amount must be a positive number.");
+            appData.expenses.push({
+                id: utils.generateId(),
+                date: document.getElementById('expDate').value,
+                amount,
+                category: document.getElementById('expCategory').value,
+                description: document.getElementById('expDesc').value.trim(),
+            });
+            saveData();
+            renderExpenses();
+            e.target.reset();
+            document.getElementById('expDate').value = utils.getTodayDateString();
+        });
+
+        document.getElementById('settings-content').addEventListener('change', e => {
+            if (e.target.matches('input.setting-input')) {
+                const { code, field } = e.target.dataset;
+                const value = e.target.type === 'range' ? parseFloat(e.target.value) : e.target.value;
+                if (appData.settings.categories[code]) {
+                    appData.settings.categories[code][field] = value;
+                }
+                saveData();
+                renderSettings();
+            } else if (e.target.id === 'bedTime' || e.target.id === 'wakeUpTime') {
+                 appData.settings[e.target.id] = e.target.value;
+                 saveData();
+                 renderDaySummary();
+            }
+        });
+
+        document.getElementById('todoCategoryFilter').addEventListener('change', renderTodos);
+    }
+    
+    loadData();
+    autoLogSleepAndAdjustTargets();
+    renderAll();
+    setupEventListeners();
+    daySummaryInterval = setInterval(renderDaySummary, 30000);
+});
+</script>
+</body>
+</html>
