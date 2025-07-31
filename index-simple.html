@@ -247,12 +247,10 @@
             <div class="tabs">
                 <button class="tab active" onclick="showTab('today')">Today</button>
                 <button class="tab" onclick="showTab('history')">History</button>
-                <button class="tab" onclick="showTab('settings')">Settings</button>
             </div>
 
             <div id="today-tab">
                 <div class="error-msg" id="errorMsg"></div>
-                <div class="warning" id="warningMsg"></div>
 
                 <div class="status-grid">
                     <div class="status-card primary">
@@ -270,14 +268,6 @@
                     <div class="status-card">
                         <h3>Status</h3>
                         <div class="value" id="currentStatus">Idle</div>
-                    </div>
-                    <div class="status-card">
-                        <h3>Max Possible</h3>
-                        <div class="value" id="maxPossible">0</div>
-                    </div>
-                    <div class="status-card">
-                        <h3>Today</h3>
-                        <div class="value" id="todayDate" style="font-size: 1.2em;">-</div>
                     </div>
                 </div>
 
@@ -301,31 +291,6 @@
             <div id="history-tab" style="display: none;">
                 <div class="session-list" id="historyList"></div>
             </div>
-
-            <div id="settings-tab" style="display: none;">
-                <div class="notes-section">
-                    <h3>Work Hours Configuration</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
-                        <div>
-                            <label style="display: block; margin-bottom: 5px;">Start Time</label>
-                            <input type="time" id="workStart" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                        </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 5px;">End Time</label>
-                            <input type="time" id="workEnd" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                        </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 5px;">Target Slots</label>
-                            <input type="number" id="targetSlots" min="1" max="300" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                        </div>
-                        <div>
-                            <label style="display: block; margin-bottom: 5px;">Slot Duration (minutes)</label>
-                            <input type="number" id="slotDuration" min="1" max="60" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
-                        </div>
-                    </div>
-                    <button class="save-btn" onclick="saveSettings()">Save Settings</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -333,7 +298,7 @@
         // IMPORTANT: REPLACE ALL VALUES BELOW WITH YOUR FIREBASE CONFIG
         // Get these from Firebase Console > Project Settings > Your apps
         const firebaseConfig = {
-             apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
+              apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
   authDomain: "slot-tracker-c7ec1.firebaseapp.com",
   databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
   projectId: "slot-tracker-c7ec1",
@@ -350,38 +315,6 @@
         let updateTimer = null;
         const DEBUG = true; // Enable debug logging
 
-        // Format date with weekday
-        function formatDateWithDay(dateStr) {
-            const date = new Date(dateStr);
-            const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const dayName = days[date.getDay()];
-            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-            const weekendTag = isWeekend ? ' (Weekend)' : '';
-            return `${dayName}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}${weekendTag}`;
-        }
-
-        // Calculate max possible slots
-        function calculateMaxPossible() {
-            const now = new Date();
-            const settings = data.settings || { workEnd: '22:00', slotDuration: 5 };
-            const [endHour, endMinute] = settings.workEnd.split(':').map(Number);
-            const endTime = new Date();
-            endTime.setHours(endHour, endMinute, 0);
-            
-            const remainingMs = Math.max(0, endTime - now);
-            const remainingMinutes = remainingMs / 1000 / 60;
-            const currentSlots = Math.floor((data.today.totalMinutes || 0) / settings.slotDuration);
-            
-            let sessionMinutes = 0;
-            if (isWorking && sessionStart) {
-                sessionMinutes = (now - sessionStart) / 1000 / 60;
-            }
-            
-            const additionalSlots = Math.floor((remainingMinutes + sessionMinutes) / settings.slotDuration);
-            return currentSlots + additionalSlots;
-        }
-
         // Data structure with proper initialization
         let data = {
             today: {
@@ -389,13 +322,7 @@
                 sessions: [],
                 totalMinutes: 0
             },
-            history: [],
-            settings: {
-                workStart: '06:30',
-                workEnd: '22:00',
-                targetSlots: 150,
-                slotDuration: 5
-            }
+            history: []
         };
         
         // Ensure data structure is always valid
@@ -415,14 +342,6 @@
             }
             if (!data.history) {
                 data.history = [];
-            }
-            if (!data.settings) {
-                data.settings = {
-                    workStart: '06:30',
-                    workEnd: '22:00',
-                    targetSlots: 150,
-                    slotDuration: 5
-                };
             }
         }
 
@@ -557,7 +476,6 @@
                 
                 validateData(); // Ensure data structure exists
                 
-                const settings = data.settings || { slotDuration: 5 };
                 const duration = Math.floor((new Date() - sessionStart) / 1000 / 60);
                 const session = {
                     start: sessionStart.toLocaleTimeString(),
@@ -600,35 +518,19 @@
         function updateDisplay() {
             validateData(); // Ensure data structure exists
             
-            const settings = data.settings || { targetSlots: 150, slotDuration: 5 };
             let currentMinutes = data.today.totalMinutes || 0;
             
             if (isWorking && sessionStart) {
                 currentMinutes += Math.floor((new Date() - sessionStart) / 1000 / 60);
             }
             
-            const slots = Math.floor(currentMinutes / settings.slotDuration);
+            const slots = Math.floor(currentMinutes / 5);
             const hours = Math.floor(currentMinutes / 60);
             const mins = currentMinutes % 60;
             
             document.getElementById('slotsUsed').textContent = slots;
-            document.getElementById('slotsRemaining').textContent = settings.targetSlots - slots;
+            document.getElementById('slotsRemaining').textContent = 150 - slots;
             document.getElementById('workTime').textContent = `${hours}:${mins.toString().padStart(2, '0')}`;
-            document.getElementById('todayDate').textContent = formatDateWithDay(new Date().toDateString()).split(',')[0]; // Show day only
-            
-            // Calculate and display max possible
-            const maxPossible = calculateMaxPossible();
-            document.getElementById('maxPossible').textContent = maxPossible;
-            
-            // Show warning if can't complete target
-            const warningEl = document.getElementById('warningMsg');
-            if (maxPossible < settings.targetSlots && slots < settings.targetSlots) {
-                const shortfall = settings.targetSlots - maxPossible;
-                warningEl.innerHTML = `⚠️ Warning: You can only complete ${maxPossible} slots today. You'll be ${shortfall} slots short of your ${settings.targetSlots} target!`;
-                warningEl.classList.add('show');
-            } else {
-                warningEl.classList.remove('show');
-            }
             
             // Update session list
             const list = document.getElementById('sessionList');
@@ -641,7 +543,7 @@
                     div.innerHTML = `
                         <strong>Session ${i + 1}</strong><br>
                         Time: ${session.start} - ${session.end}<br>
-                        Duration: ${session.duration} min (${Math.floor(session.duration / settings.slotDuration)} slots)<br>
+                        Duration: ${session.duration} min (${Math.floor(session.duration / 5)} slots)<br>
                         Notes: ${session.notes}
                     `;
                     list.appendChild(div);
@@ -653,116 +555,46 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             event.target.classList.add('active');
             
-            document.getElementById('today-tab').style.display = 'none';
-            document.getElementById('history-tab').style.display = 'none';
-            document.getElementById('settings-tab').style.display = 'none';
-            
             if (tab === 'today') {
                 document.getElementById('today-tab').style.display = 'block';
-            } else if (tab === 'history') {
+                document.getElementById('history-tab').style.display = 'none';
+            } else {
+                document.getElementById('today-tab').style.display = 'none';
                 document.getElementById('history-tab').style.display = 'block';
                 showHistory();
-            } else if (tab === 'settings') {
-                document.getElementById('settings-tab').style.display = 'block';
-                loadSettings();
-            }
-        }
-
-        function loadSettings() {
-            const settings = data.settings || {
-                workStart: '06:30',
-                workEnd: '22:00',
-                targetSlots: 150,
-                slotDuration: 5
-            };
-            
-            document.getElementById('workStart').value = settings.workStart;
-            document.getElementById('workEnd').value = settings.workEnd;
-            document.getElementById('targetSlots').value = settings.targetSlots;
-            document.getElementById('slotDuration').value = settings.slotDuration;
-        }
-
-        function saveSettings() {
-            try {
-                const newSettings = {
-                    workStart: document.getElementById('workStart').value,
-                    workEnd: document.getElementById('workEnd').value,
-                    targetSlots: parseInt(document.getElementById('targetSlots').value),
-                    slotDuration: parseInt(document.getElementById('slotDuration').value)
-                };
-                
-                // Validate settings
-                if (newSettings.targetSlots < 1 || newSettings.targetSlots > 300) {
-                    showError('Target slots must be between 1 and 300');
-                    return;
-                }
-                
-                if (newSettings.slotDuration < 1 || newSettings.slotDuration > 60) {
-                    showError('Slot duration must be between 1 and 60 minutes');
-                    return;
-                }
-                
-                data.settings = newSettings;
-                saveToFirebase();
-                updateDisplay();
-                alert('Settings saved successfully!');
-                
-            } catch (error) {
-                showError('Error saving settings: ' + error.message);
             }
         }
 
         function showHistory() {
             const list = document.getElementById('historyList');
-            list.innerHTML = '<h3 style="margin-bottom: 15px;">Work History</h3>';
+            list.innerHTML = '';
             
             if (data.history && Array.isArray(data.history)) {
-                // Add today's data if exists
-                let allDays = [...data.history];
-                if (data.today.sessions && data.today.sessions.length > 0) {
-                    allDays.unshift({...data.today});
-                }
-                
-                allDays.forEach(day => {
+                data.history.forEach(day => {
                     const div = document.createElement('div');
                     div.className = 'session-item';
-                    const settings = data.settings || { targetSlots: 150, slotDuration: 5 };
-                    const slots = Math.floor((day.totalMinutes || 0) / settings.slotDuration);
+                    const slots = Math.floor((day.totalMinutes || 0) / 5);
                     const sessions = day.sessions ? day.sessions.length : 0;
                     const totalMins = day.totalMinutes || 0;
-                    const hours = Math.floor(totalMins / 60);
-                    const mins = totalMins % 60;
-                    const completion = Math.round((slots / settings.targetSlots) * 100);
                     
                     div.innerHTML = `
-                        <strong style="color: #1e40af; font-size: 1.1em;">${formatDateWithDay(day.date)}</strong><br>
-                        <div style="margin-top: 8px; color: #64748b;">
-                            <strong>Daily Summary:</strong><br>
-                            • Total Work Time: ${hours}h ${mins}m<br>
-                            • Sessions Completed: ${sessions}<br>
-                            • Slots Achieved: ${slots} / ${settings.targetSlots} (${completion}%)<br>
-                            ${completion >= 100 ? '<span style="color: #22c55e;">✅ Target Achieved!</span>' : 
-                              completion >= 80 ? '<span style="color: #f59e0b;">🔶 Almost there!</span>' : 
-                              '<span style="color: #ef4444;">❌ Keep pushing!</span>'}
-                        </div>
+                        <strong>${day.date}</strong><br>
+                        Sessions: ${sessions}<br>
+                        Total: ${Math.floor(totalMins / 60)}h ${totalMins % 60}m<br>
+                        Slots: ${slots} / 150
                     `;
                     list.appendChild(div);
                 });
-                
-                if (allDays.length === 0) {
-                    list.innerHTML += '<p style="text-align: center; color: #94a3b8;">No history yet. Start tracking!</p>';
-                }
             }
         }
 
         function exportData() {
-            const settings = data.settings || { slotDuration: 5 };
             let csv = 'Date,Start,End,Duration,Slots,Notes\n';
             
             // Today's data
             if (data.today && data.today.sessions) {
                 data.today.sessions.forEach(s => {
-                    csv += `${data.today.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / settings.slotDuration)},"${s.notes}"\n`;
+                    csv += `${data.today.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / 5)},"${s.notes}"\n`;
                 });
             }
             
@@ -771,7 +603,7 @@
                 data.history.forEach(day => {
                     if (day.sessions && Array.isArray(day.sessions)) {
                         day.sessions.forEach(s => {
-                            csv += `${day.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / settings.slotDuration)},"${s.notes}"\n`;
+                            csv += `${day.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / 5)},"${s.notes}"\n`;
                         });
                     }
                 });
@@ -828,13 +660,7 @@
                             sessions: [],
                             totalMinutes: 0
                         },
-                        history: [],
-                        settings: {
-                            workStart: '06:30',
-                            workEnd: '22:00',
-                            targetSlots: 150,
-                            slotDuration: 5
-                        }
+                        history: []
                     };
                 }
                 
@@ -856,13 +682,6 @@
         // Initialize on load
         validateData(); // Ensure data structure exists
         init();
-        
-        // Auto-update display every minute for max possible calculation
-        setInterval(() => {
-            if (document.getElementById('today-tab').style.display !== 'none') {
-                updateDisplay();
-            }
-        }, 60000);
     </script>
 </body>
 </html>
