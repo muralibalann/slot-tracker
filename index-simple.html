@@ -295,9 +295,10 @@
     </div>
 
     <script>
-        // REPLACE WITH YOUR FIREBASE CONFIG
+        // IMPORTANT: REPLACE ALL VALUES BELOW WITH YOUR FIREBASE CONFIG
+        // Get these from Firebase Console > Project Settings > Your apps
         const firebaseConfig = {
-            apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
+              apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
   authDomain: "slot-tracker-c7ec1.firebaseapp.com",
   databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
   projectId: "slot-tracker-c7ec1",
@@ -312,8 +313,9 @@
         let isWorking = false;
         let sessionStart = null;
         let updateTimer = null;
+        const DEBUG = true; // Enable debug logging
 
-        // Data structure
+        // Data structure with proper initialization
         let data = {
             today: {
                 date: new Date().toDateString(),
@@ -322,6 +324,26 @@
             },
             history: []
         };
+        
+        // Ensure data structure is always valid
+        function validateData() {
+            if (!data) {
+                data = {};
+            }
+            if (!data.today) {
+                data.today = {
+                    date: new Date().toDateString(),
+                    sessions: [],
+                    totalMinutes: 0
+                };
+            }
+            if (!data.today.sessions) {
+                data.today.sessions = [];
+            }
+            if (!data.history) {
+                data.history = [];
+            }
+        }
 
         // Initialize app
         function init() {
@@ -360,6 +382,7 @@
                 const serverData = snapshot.val();
                 if (serverData) {
                     data = serverData;
+                    validateData(); // Ensure data structure is valid
                     
                     // Check if today's data is old
                     if (data.today.date !== new Date().toDateString()) {
@@ -368,6 +391,10 @@
                     
                     updateDisplay();
                     updateSyncStatus('synced');
+                } else {
+                    // No data on server, use default
+                    validateData();
+                    saveToFirebase();
                 }
             }, (error) => {
                 showError('Sync error: ' + error.message);
@@ -378,19 +405,33 @@
         function saveToFirebase() {
             if (!userRef) return;
             
+            validateData(); // Ensure data is valid before saving
+            
+            if (DEBUG) {
+                console.log('Saving to Firebase:', JSON.stringify(data, null, 2));
+            }
+            
             updateSyncStatus('syncing');
             userRef.set(data).then(() => {
                 updateSyncStatus('synced');
+                if (DEBUG) console.log('Save successful');
             }).catch((error) => {
                 showError('Save error: ' + error.message);
                 updateSyncStatus('error');
+                if (DEBUG) console.error('Save failed:', error);
             });
         }
 
         function archiveToday() {
-            if (data.today.sessions.length > 0) {
+            validateData();
+            
+            if (data.today && data.today.sessions && data.today.sessions.length > 0) {
+                if (!data.history) {
+                    data.history = [];
+                }
                 data.history.unshift({...data.today});
             }
+            
             data.today = {
                 date: new Date().toDateString(),
                 sessions: [],
@@ -410,43 +451,74 @@
         }
 
         function stopWork() {
-            if (!isWorking) return;
-            
-            isWorking = false;
-            clearInterval(updateTimer);
-            
-            document.getElementById('notesSection').style.display = 'block';
-            document.getElementById('notes').focus();
+            try {
+                if (!isWorking) return;
+                
+                isWorking = false;
+                if (updateTimer) {
+                    clearInterval(updateTimer);
+                }
+                
+                document.getElementById('notesSection').style.display = 'block';
+                document.getElementById('notes').focus();
+            } catch (error) {
+                showError('Error stopping work: ' + error.message);
+                console.error('stopWork error:', error);
+            }
         }
 
         function saveSession() {
-            if (!sessionStart) return;
-            
-            const duration = Math.floor((new Date() - sessionStart) / 1000 / 60);
-            const session = {
-                start: sessionStart.toLocaleTimeString(),
-                end: new Date().toLocaleTimeString(),
-                duration: duration,
-                notes: document.getElementById('notes').value || 'No notes'
-            };
-            
-            data.today.sessions.push(session);
-            data.today.totalMinutes += duration;
-            
-            // Reset UI
-            sessionStart = null;
-            document.getElementById('notes').value = '';
-            document.getElementById('notesSection').style.display = 'none';
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            document.getElementById('currentStatus').textContent = 'Idle';
-            
-            saveToFirebase();
-            updateDisplay();
+            try {
+                if (!sessionStart) {
+                    showError('No active session to save');
+                    return;
+                }
+                
+                validateData(); // Ensure data structure exists
+                
+                const duration = Math.floor((new Date() - sessionStart) / 1000 / 60);
+                const session = {
+                    start: sessionStart.toLocaleTimeString(),
+                    end: new Date().toLocaleTimeString(),
+                    duration: duration,
+                    notes: document.getElementById('notes').value || 'No notes'
+                };
+                
+                if (DEBUG) {
+                    console.log('Saving session:', session);
+                    console.log('Current data structure:', JSON.stringify(data, null, 2));
+                }
+                
+                // Initialize sessions array if it doesn't exist
+                if (!data.today.sessions) {
+                    data.today.sessions = [];
+                }
+                
+                data.today.sessions.push(session);
+                data.today.totalMinutes = (data.today.totalMinutes || 0) + duration;
+                
+                // Reset UI
+                sessionStart = null;
+                document.getElementById('notes').value = '';
+                document.getElementById('notesSection').style.display = 'none';
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('currentStatus').textContent = 'Idle';
+                
+                saveToFirebase();
+                updateDisplay();
+                
+                if (DEBUG) console.log('Session saved successfully');
+            } catch (error) {
+                showError('Error saving session: ' + error.message);
+                console.error('saveSession error:', error);
+            }
         }
 
         function updateDisplay() {
-            let currentMinutes = data.today.totalMinutes;
+            validateData(); // Ensure data structure exists
+            
+            let currentMinutes = data.today.totalMinutes || 0;
             
             if (isWorking && sessionStart) {
                 currentMinutes += Math.floor((new Date() - sessionStart) / 1000 / 60);
@@ -464,17 +536,19 @@
             const list = document.getElementById('sessionList');
             list.innerHTML = '';
             
-            data.today.sessions.forEach((session, i) => {
-                const div = document.createElement('div');
-                div.className = 'session-item';
-                div.innerHTML = `
-                    <strong>Session ${i + 1}</strong><br>
-                    Time: ${session.start} - ${session.end}<br>
-                    Duration: ${session.duration} min (${Math.floor(session.duration / 5)} slots)<br>
-                    Notes: ${session.notes}
-                `;
-                list.appendChild(div);
-            });
+            if (data.today.sessions && Array.isArray(data.today.sessions)) {
+                data.today.sessions.forEach((session, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'session-item';
+                    div.innerHTML = `
+                        <strong>Session ${i + 1}</strong><br>
+                        Time: ${session.start} - ${session.end}<br>
+                        Duration: ${session.duration} min (${Math.floor(session.duration / 5)} slots)<br>
+                        Notes: ${session.notes}
+                    `;
+                    list.appendChild(div);
+                });
+            }
         }
 
         function showTab(tab) {
@@ -495,34 +569,45 @@
             const list = document.getElementById('historyList');
             list.innerHTML = '';
             
-            data.history.forEach(day => {
-                const div = document.createElement('div');
-                div.className = 'session-item';
-                const slots = Math.floor(day.totalMinutes / 5);
-                div.innerHTML = `
-                    <strong>${day.date}</strong><br>
-                    Sessions: ${day.sessions.length}<br>
-                    Total: ${Math.floor(day.totalMinutes / 60)}h ${day.totalMinutes % 60}m<br>
-                    Slots: ${slots} / 150
-                `;
-                list.appendChild(div);
-            });
+            if (data.history && Array.isArray(data.history)) {
+                data.history.forEach(day => {
+                    const div = document.createElement('div');
+                    div.className = 'session-item';
+                    const slots = Math.floor((day.totalMinutes || 0) / 5);
+                    const sessions = day.sessions ? day.sessions.length : 0;
+                    const totalMins = day.totalMinutes || 0;
+                    
+                    div.innerHTML = `
+                        <strong>${day.date}</strong><br>
+                        Sessions: ${sessions}<br>
+                        Total: ${Math.floor(totalMins / 60)}h ${totalMins % 60}m<br>
+                        Slots: ${slots} / 150
+                    `;
+                    list.appendChild(div);
+                });
+            }
         }
 
         function exportData() {
             let csv = 'Date,Start,End,Duration,Slots,Notes\n';
             
             // Today's data
-            data.today.sessions.forEach(s => {
-                csv += `${data.today.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / 5)},"${s.notes}"\n`;
-            });
+            if (data.today && data.today.sessions) {
+                data.today.sessions.forEach(s => {
+                    csv += `${data.today.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / 5)},"${s.notes}"\n`;
+                });
+            }
             
             // History
-            data.history.forEach(day => {
-                day.sessions.forEach(s => {
-                    csv += `${day.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / 5)},"${s.notes}"\n`;
+            if (data.history && Array.isArray(data.history)) {
+                data.history.forEach(day => {
+                    if (day.sessions && Array.isArray(day.sessions)) {
+                        day.sessions.forEach(s => {
+                            csv += `${day.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / 5)},"${s.notes}"\n`;
+                        });
+                    }
                 });
-            });
+            }
             
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
@@ -539,6 +624,7 @@
                     sessions: [],
                     totalMinutes: 0
                 };
+                validateData();
                 saveToFirebase();
                 updateDisplay();
             }
@@ -566,16 +652,35 @@
                 const savedData = snapshot.val();
                 if (savedData) {
                     data = savedData;
-                    if (data.today.date !== new Date().toDateString()) {
-                        archiveToday();
-                    }
+                } else {
+                    // Initialize with default data
+                    data = {
+                        today: {
+                            date: new Date().toDateString(),
+                            sessions: [],
+                            totalMinutes: 0
+                        },
+                        history: []
+                    };
                 }
+                
+                validateData(); // Ensure structure is valid
+                
+                if (data.today.date !== new Date().toDateString()) {
+                    archiveToday();
+                }
+                
                 updateDisplay();
-                saveToFirebase(); // Save if we archived
+                saveToFirebase(); // Save if we initialized or archived
+            }).catch(error => {
+                showError('Load error: ' + error.message);
+                validateData(); // Use default data on error
+                updateDisplay();
             });
         }
 
         // Initialize on load
+        validateData(); // Ensure data structure exists
         init();
     </script>
 </body>
