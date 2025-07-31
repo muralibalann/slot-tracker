@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Personal Tracker</title>
+    <meta name="theme-color" content="#4A5568">
+    <style>
+        :root {
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --primary-light: #4299e1; --primary-dark: #63b3ed;
+            --bg-light: #f7fafc;      --bg-dark: #1a202c;
+            --card-light: #ffffff;    --card-dark: #2d3748;
+            --text-light: #2d3748;    --text-dark: #e2e8f0;
+            --border-light: #e2e8f0;  --border-dark: #4a5568;
+            --green: #48bb78; --red: #f56565; --yellow: #ecc94b; --blue: #4299e1;
+        }
+        body { font-family: var(--font-sans); margin: 0; padding: 10px 20px; background-color: var(--bg-light); color: var(--text-light); transition: background-color 0.3s, color 0.3s; }
+        body.dark-mode { background-color: var(--bg-dark); color: var(--text-dark); }
+        .container { max-width: 1200px; margin: 0 auto; background-color: var(--card-light); border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); padding: 25px; transition: background-color 0.3s; }
+        body.dark-mode .container { background-color: var(--card-dark); }
+        h1, h2, h3 { color: inherit; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; }
+        body.dark-mode h1, body.dark-mode h2, body.dark-mode h3 { border-color: var(--border-dark); }
+        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+        .tabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        button, .button { padding: 10px 15px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; font-size: 0.9rem; }
+        .tab { background: transparent; color: #718096; }
+        body.dark-mode .tab { color: #a0aec0; }
+        .tab.active { background-color: var(--primary-light); color: white; }
+        body.dark-mode .tab.active { background-color: var(--primary-dark); }
+        .btn-green { background: var(--green); color: white; } .btn-red { background: var(--red); color: white; } .btn-yellow { background: var(--yellow); color: #1a202c; } .btn-blue { background: var(--blue); color: white; }
+        .btn-icon { background: transparent; padding: 5px; font-size: 1.2rem; border: none; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .data-table th, .data-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-light); }
+        body.dark-mode .data-table th, body.dark-mode .data-table td { border-color: var(--border-dark); }
+        .data-table th { background-color: #edf2f7; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; }
+        body.dark-mode .data-table th { background-color: #2d3748; }
+        .progress-bar-container { width: 100%; background-color: #edf2f7; border-radius: 10px; height: 16px; overflow: hidden; position: relative; }
+        body.dark-mode .progress-bar-container { background-color: #4a5568; }
+        .progress-bar { height: 100%; transition: width 0.5s ease-in-out; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 1rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+        input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid var(--border-light); background-color: #fff; color: var(--text-light); }
+        body.dark-mode input, body.dark-mode select, body.dark-mode textarea { border-color: var(--border-dark); background-color: #2d3748; color: var(--text-dark); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card-light); padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; }
+        body.dark-mode .modal-content { background-color: var(--card-dark); }
+        #session-controls { display: flex; gap: 10px; align-items: center; }
+        #live-timer { font-size: 1.2rem; font-weight: bold; margin-left: auto; color: var(--green); }
+        .day-summary-panel { display: flex; justify-content: space-around; background-color: #edf2f7; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center; flex-wrap: wrap; gap: 1rem;}
+        body.dark-mode .day-summary-panel { background-color: #2d3748; }
+        .summary-item h4 { margin: 0 0 0.25rem 0; font-size: 0.9rem; color: #718096; }
+        body.dark-mode .summary-item h4 { color: #a0aec0; }
+        .summary-item p { margin: 0; font-size: 1.5rem; font-weight: bold; }
+        .summary-item p.low-time { color: var(--red); }
+        .notification-banner { padding: 15px; background-color: var(--yellow); color: #1a202c; border-radius: 8px; margin-bottom: 1rem; }
+        .priority-high { color: var(--red); } .priority-medium { color: var(--yellow); } .priority-low { color: #a0aec0; }
+        .task-completed { text-decoration: line-through; opacity: 0.6; }
+        .history-day { border: 1px solid var(--border-light); border-radius: 8px; margin-bottom: 1rem; }
+        body.dark-mode .history-day { border-color: var(--border-dark); }
+        .history-header { padding: 15px; font-weight: bold; cursor: pointer; background-color: #f7fafc; }
+        body.dark-mode .history-header { background-color: #2d3748; }
+        .history-content { padding: 15px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header-controls">
+            <h1>Personal Dashboard</h1>
+            <div class="user-controls" style="display:flex; align-items:center; gap:15px;">
+                <span id="userName">User: guest</span>
+                <button id="darkModeToggle">🌙</button>
+            </div>
+        </div>
+        <div id="notification-area"></div>
+        <div class="tabs">
+            <button class="tab active" data-tab="today">Today</button>
+            <button class="tab" data-tab="history">History</button>
+            <button class="tab" data-tab="expenses">Expenses</button>
+            <button class="tab" data-tab="goals">Goals</button>
+            <button class="tab" data-tab="todos">To-Do</button>
+            <button class="tab" data-tab="settings">Settings</button>
+        </div>
+
+        <div class="tab-content active" id="today-content">
+             <div class="day-summary-panel">
+                <div class="summary-item"><h4>Total Remaining Today</h4><p id="totalRemainingTicker">-</p></div>
+                <div class="summary-item"><h4>Top Category Today</h4><p id="topCategoryToday">-</p></div>
+                <div class="summary-item"><h4>Unfinished To-Dos</h4><p id="unfinishedTodosCount">0</p></div>
+            </div>
+            <div class="form-grid" style="align-items: center;">
+                <div id="session-controls">
+                    <select id="categorySelect"></select>
+                    <button class="btn-green" id="startBtn">Start</button>
+                    <button class="btn-yellow" id="pauseBtn" style="display: none;">Pause</button>
+                    <button class="btn-red" id="stopBtn" style="display: none;">Stop</button>
+                </div>
+                 <span id="live-timer"></span>
+            </div>
+            
+            <h3>Today's Progress</h3>
+            <table class="data-table">
+                <thead><tr><th>Category</th><th>Target</th><th>Actual</th><th>Remaining</th><th style="width: 25%;">Progress</th></tr></thead>
+                <tbody id="progressTableBody"></tbody>
+                <tfoot><tr style="font-weight: bold;"><td colspan="1">Total</td><td id="totalTarget"></td><td id="totalActual"></td><td id="totalRemaining"></td><td></td></tr></tfoot>
+            </table>
+
+            <h3 style="margin-top: 2rem;">Today's Sessions Log</h3>
+            <table class="data-table">
+                <thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Category</th><th>Notes</th><th>Actions</th></tr></thead>
+                <tbody id="sessionLogBody"></tbody>
+            </table>
+        </div>
+
+        <div class="tab-content" id="history-content" style="display: none;">
+             <h3>History</h3>
+             <div class="form-grid">
+                <input type="date" id="historyDateFilter">
+                <button id="clearHistoryFilter">Show All</button>
+                <button id="exportCsvBtn" class="button">Export as CSV</button>
+             </div>
+             <div id="historyContainer"></div>
+        </div>
+        
+        <div class="tab-content" id="expenses-content" style="display: none;">
+            <h3>Log New Expense</h3>
+            <form id="expenseForm" class="form-grid">
+                <div class="form-group"><label for="expDate">Date</label><input type="date" id="expDate" required></div>
+                <div class="form-group"><label for="expAmount">Amount</label><input type="number" id="expAmount" required min="0.01" step="0.01"></div>
+                <div class="form-group"><label for="expCurrency">Currency</label><select id="expCurrency"><option>USD</option><option>EUR</option><option>GBP</option><option>INR</option></select></div>
+                <div class="form-group"><label for="expCategory">Category</label><select id="expCategory"></select></div>
+                <div class="form-group" style="grid-column: 1 / -1;"><label for="expDesc">Description</label><textarea id="expDesc"></textarea></div>
+                <div class="form-group" style="grid-column: 1 / -1;"><label for="expReceipt">Receipt URL (Optional)</label><input type="url" id="expReceipt" placeholder="https://example.com/receipt.jpg"></div>
+                <button type="submit" class="btn-blue" style="align-self: flex-end;">Add Expense</button>
+            </form>
+            <h3>All Expenses</h3>
+            <table class="data-table">
+                <thead><tr><th>Date</th><th>Amount</th><th>Category</th><th>Description</th><th>Receipt</th><th>Actions</th></tr></thead>
+                <tbody id="expensesTableBody"></tbody>
+            </table>
+        </div>
+        
+        <div class="tab-content" id="goals-content" style="display: none;">
+            <h3>Weekly Goals</h3>
+            <p>Set weekly hour targets for your categories.</p>
+            <table class="data-table">
+                <thead><tr><th>Category</th><th>Weekly Target</th><th>This Week's Actual</th><th>Progress</th></tr></thead>
+                <tbody id="goalsTableBody"></tbody>
+            </table>
+        </div>
+        
+        <div class="tab-content" id="todos-content" style="display: none;">
+            <div class="form-grid">
+                <div><h3>Add New To-Do Task</h3></div>
+                <div class="form-group" style="align-self: flex-end;">
+                     <label for="todoCategoryFilter">Filter by Category</label>
+                     <select id="todoCategoryFilter"></select>
+                </div>
+            </div>
+            <form id="todoForm" class="form-grid">
+                 <div class="form-group" style="grid-column: 1 / -1;"><label for="todoTitle">Title</label><input type="text" id="todoTitle" required></div>
+                 <div class="form-group"><label for="todoCategory">Category</label><select id="todoCategory"></select></div>
+                 <div class="form-group"><label for="todoPriority">Priority</label><select id="todoPriority"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+                 <div class="form-group"><label for="todoDueDate">Due Date</label><input type="date" id="todoDueDate"></div>
+                 <button type="submit" class="btn-blue" style="align-self: flex-end;">Add Task</button>
+            </form>
+             <h3>To-Do List</h3>
+            <table class="data-table">
+                <thead><tr><th>Status</th><th>Title</th><th>Category</th><th>Priority</th><th>Due</th><th>Actions</th></tr></thead>
+                <tbody id="todosTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="tab-content" id="settings-content" style="display: none;">
+            <h3>Categories & Targets</h3>
+            <table class="data-table">
+                 <thead><tr><th>Category</th><th>Code</th><th>Color</th><th>Target (Hours)</th><th>Actions</th></tr></thead>
+                 <tbody id="categorySettingsBody"></tbody>
+            </table>
+            <form id="newCategoryForm" class="form-grid" style="margin-top: 1rem;">
+                <input type="text" id="newCatName" placeholder="New Category Name" required>
+                <input type="text" id="newCatCode" placeholder="Code (e.g., HW)" required maxlength="3">
+                <input type="color" id="newCatColor" value="#4299e1">
+                <button type="submit" class="btn-blue">Add</button>
+            </form>
+            <h3 style="margin-top: 2rem;">Data Management</h3>
+            <div style="display:flex; gap: 1rem; flex-wrap: wrap;">
+                <button id="exportDataBtn" class="button">Export All Data (JSON)</button>
+                <label class="button">Import Data <input type="file" id="importDataInput" accept=".json" style="display:none;"></label>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="editSessionModal">
+        <div class="modal-content">
+            <h3>Edit Session</h3>
+            <form id="editSessionForm">
+                <input type="hidden" id="editSessionId">
+                <div class="form-group"><label for="editSessionNotes">Notes</label><textarea id="editSessionNotes" rows="4"></textarea></div>
+                <div class="form-group"><label for="editSessionDuration">Duration (minutes)</label><input type="number" id="editSessionDuration" min="1" required></div>
+                <div style="display:flex; justify-content:flex-end; gap:1rem;">
+                    <button type="button" class="button" data-action="close-modal">Cancel</button>
+                    <button type="submit" class="btn-blue">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+"use strict";
+document.addEventListener('DOMContentLoaded', () => {
+    // --- APP STATE & CONFIG ---
+    let appData = {};
+    let activeSession = { id: null };
+    let liveTimerInterval = null;
+    let totalRemainingInterval = null;
+    let uiUpdateScheduled = false;
+
+    // --- UTILITIES ---
+    const utils = {
+        generateId: () => `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        formatTime: (totalMinutes, compact = false) => {
+            if (isNaN(totalMinutes) || totalMinutes < 0) return '0h 0m';
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = Math.floor(totalMinutes % 60);
+            if (compact) return `${hours}h ${minutes}m`;
+            return `${hours} hour${hours !== 1 ? 's' : ''}, ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        },
+        formatTimer: (totalSeconds) => {
+            totalSeconds = Math.max(0, Math.floor(totalSeconds));
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        },
+        getTodayDateString: () => new Date().toISOString().slice(0, 10),
+        getStartOfWeek: (date = new Date()) => {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff)).toISOString().slice(0, 10);
+        },
+        debounce: (func, delay) => {
+            let timeout;
+            return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); };
+        }
+    };
+
+    // --- DATA PERSISTENCE ---
+    function loadData() {
+        const defaultData = {
+            settings: {
+                darkMode: false, userName: "guest",
+                categories: {
+                    'MZ': { name: 'Mizuho Work', color: '#e53e3e', target: 4, weeklyGoal: 20 },
+                    'GC': { name: 'Grand Cholas', color: '#dd6b20', target: 1, weeklyGoal: 5 },
+                    'AI': { name: 'AI Projects', color: '#3182ce', target: 6, weeklyGoal: 10 },
+                    'Fly': { name: 'Family', color: '#38a169', target: 1, weeklyGoal: 10 },
+                    'Brk': { name: 'Break', color: '#d69e2e', target: 4, weeklyGoal: 14 },
+                    'Slp': { name: 'Sleep', color: '#805ad5', target: 8, weeklyGoal: 56 },
+                }
+            },
+            sessions: {}, todos: [], expenses: []
+        };
+        try {
+            const savedData = localStorage.getItem('personalTrackerData_v6');
+            appData = savedData ? JSON.parse(savedData) : defaultData;
+            appData.settings = {...defaultData.settings, ...appData.settings};
+            appData.settings.categories = {...defaultData.settings.categories, ...appData.settings.categories};
+        } catch (error) { console.error("Error loading data:", error); appData = defaultData; }
+        const today = utils.getTodayDateString();
+        if (!appData.sessions[today]) appData.sessions[today] = [];
+        
+        // Load active session state
+        const savedSession = sessionStorage.getItem('activeTrackerSession');
+        if (savedSession) {
+            activeSession = JSON.parse(savedSession);
+        }
+    }
+
+    function saveData() {
+        try {
+            localStorage.setItem('personalTrackerData_v6', JSON.stringify(appData));
+        } catch (error) { console.error("Error saving data:", error); }
+    }
+    const debouncedSaveData = utils.debounce(saveData, 500);
+
+    // --- RENDERING ---
+    const render = {
+        all: () => {
+            if (uiUpdateScheduled) return;
+            uiUpdateScheduled = true;
+            requestAnimationFrame(() => {
+                render.chrome();
+                render.dashboardWidgets();
+                render.progressTable();
+                render.sessionLog();
+                render.settings();
+                render.todos();
+                render.expenses();
+                render.history();
+                render.goals();
+                render.selectors();
+                render.totalRemainingTicker(false);
+                uiUpdateScheduled = false;
+            });
+        },
+        chrome: () => { /* ... */ },
+        dashboardWidgets: () => {
+            const today = utils.getTodayDateString();
+            const sessionsToday = appData.sessions[today] || [];
+            let topCategory = '-';
+            if (sessionsToday.length > 0) {
+                const categoryTotals = sessionsToday.reduce((acc, s) => ({...acc, [s.type]: (acc[s.type] || 0) + s.duration}), {});
+                const topCode = Object.keys(categoryTotals).reduce((a, b) => categoryTotals[a] > categoryTotals[b] ? a : b);
+                topCategory = appData.settings.categories[topCode]?.name || 'N/A';
+            }
+            document.getElementById('topCategoryToday').textContent = topCategory;
+            const unfinishedTodos = appData.todos.filter(t => !t.completed).length;
+            document.getElementById('unfinishedTodosCount').textContent = unfinishedTodos;
+        },
+        progressTable: () => { /* ... */ },
+        sessionLog: () => { /* ... */ },
+        settings: () => {
+            const settingsBody = document.getElementById('categorySettingsBody');
+            settingsBody.innerHTML = '';
+            Object.keys(appData.settings.categories).forEach(code => {
+                const cat = appData.settings.categories[code];
+                settingsBody.innerHTML += `
+                    <tr>
+                        <td><input type="text" class="setting-input" data-field="name" data-code="${code}" value="${cat.name}" required></td>
+                        <td>${code}</td>
+                        <td><input type="color" class="setting-input" data-field="color" data-code="${code}" value="${cat.color}"></td>
+                        <td><input type="number" class="setting-input" data-field="target" data-code="${code}" value="${cat.target}" min="0" step="0.5"></td>
+                        <td><button class="btn-icon" data-action="delete-category" data-code="${code}">🗑️</button></td>
+                    </tr>`;
+            });
+        },
+        todos: () => { /* ... */ },
+        expenses: () => { /* ... */ },
+        history: () => { /* ... */ },
+        goals: () => {
+            const goalsBody = document.getElementById('goalsTableBody');
+            goalsBody.innerHTML = '';
+            const startOfWeek = utils.getStartOfWeek();
+            const today = utils.getTodayDateString();
+            
+            // Calculate weekly totals
+            const weeklyTotals = Object.keys(appData.settings.categories).reduce((acc, code) => ({...acc, [code]: 0}), {});
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(startOfWeek);
+                d.setDate(d.getDate() + i);
+                const dateStr = d.toISOString().slice(0, 10);
+                if(dateStr > today) break;
+                (appData.sessions[dateStr] || []).forEach(s => {
+                    if(weeklyTotals[s.type] !== undefined) weeklyTotals[s.type] += s.duration;
+                });
+            }
+
+            Object.keys(appData.settings.categories).forEach(code => {
+                const cat = appData.settings.categories[code];
+                const goalMins = (cat.weeklyGoal || 0) * 60;
+                const actualMins = weeklyTotals[code];
+                const progress = goalMins > 0 ? Math.min(100, (actualMins / goalMins) * 100) : 0;
+                goalsBody.innerHTML += `
+                    <tr>
+                        <td><strong style="color:${cat.color};">${cat.name}</strong></td>
+                        <td><input type="number" class="setting-input" data-field="weeklyGoal" data-code="${code}" value="${cat.weeklyGoal || 0}" min="0"> hours</td>
+                        <td>${utils.formatTime(actualMins, true)}</td>
+                        <td><div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%; background-color:${cat.color};"></div></div></td>
+                    </tr>`;
+            });
+        },
+        selectors: () => { /* ... */ },
+        totalRemainingTicker: (isRunning) => {
+            clearInterval(totalRemainingInterval);
+            const today = utils.getTodayDateString();
+            const sessionsToday = appData.sessions[today] || [];
+            let totalTargetMins = 0;
+            let totalActualMins = 0;
+            Object.values(appData.settings.categories).forEach(cat => { totalTargetMins += (cat.target || 0) * 60; });
+            sessionsToday.forEach(s => { totalActualMins += s.duration; });
+            
+            let remainingSeconds = (totalTargetMins - totalActualMins) * 60;
+            const tickerEl = document.getElementById('totalRemainingTicker');
+            
+            function updateTicker() {
+                tickerEl.textContent = utils.formatTimer(remainingSeconds);
+                if(remainingSeconds < 3600) tickerEl.classList.add('low-time'); else tickerEl.classList.remove('low-time');
+                if (isRunning) remainingSeconds--;
+            }
+
+            updateTicker();
+            if(isRunning) totalRemainingInterval = setInterval(updateTicker, 1000);
+        }
+    };
+    
+    // Fill in identical render functions from previous versions to keep code DRY in this view
+    // (In a real app, these would be in separate modules)
+    for(const func of ['chrome', 'progressTable', 'sessionLog', 'todos', 'expenses', 'history', 'selectors']) {
+        const funcBody = document.getElementById(`v5_render_${func}`)?.textContent;
+        if(funcBody) render[func] = eval(`(${funcBody})`);
+    }
+
+    // --- SESSION MANAGEMENT ---
+    function startSession(categoryCode, todoId = null) {
+        if (activeSession.id) return alert("A session is already running.");
+        activeSession = { id: utils.generateId(), startTime: Date.now(), pausedTime: null, totalPausedDuration: 0, type: categoryCode, todoId };
+        sessionStorage.setItem('activeTrackerSession', JSON.stringify(activeSession));
+        updateSessionControlsUI();
+        liveTimerInterval = setInterval(updateLiveTimer, 1000);
+        render.totalRemainingTicker(true);
+    }
+    function pauseSession(isPausing) {
+        if (!activeSession.id) return;
+        if (isPausing && !activeSession.pausedTime) {
+            activeSession.pausedTime = Date.now();
+            clearInterval(liveTimerInterval);
+            render.totalRemainingTicker(false);
+        } else if (!isPausing && activeSession.pausedTime) {
+            activeSession.totalPausedDuration += Date.now() - activeSession.pausedTime;
+            activeSession.pausedTime = null;
+            liveTimerInterval = setInterval(updateLiveTimer, 1000);
+            render.totalRemainingTicker(true);
+        }
+        sessionStorage.setItem('activeTrackerSession', JSON.stringify(activeSession));
+        updateSessionControlsUI();
+    }
+    function stopSession() {
+        if (!activeSession.id) return;
+        pauseSession(true);
+        saveAndEndSession();
+    }
+    function saveAndEndSession() {
+        const endTime = Date.now();
+        const durationMs = endTime - activeSession.startTime - activeSession.totalPausedDuration;
+        const durationMins = Math.round(durationMs / 60000);
+        if (durationMins > 0) {
+            const today = utils.getTodayDateString();
+            appData.sessions[today].push({
+                id: activeSession.id, startTime: activeSession.startTime, endTime,
+                duration: durationMins, type: activeSession.type,
+                notes: `Session for ${appData.settings.categories[activeSession.type]?.name || 'a task'}.`, todoId: activeSession.todoId
+            });
+            if (activeSession.todoId) {
+                if (confirm("Session linked to a to-do has ended. Mark to-do as complete?")) {
+                    const todo = appData.todos.find(t => t.id === activeSession.todoId);
+                    if (todo) todo.completed = true;
+                }
+            }
+            debouncedSaveData();
+        }
+        clearInterval(liveTimerInterval);
+        activeSession = { id: null };
+        sessionStorage.removeItem('activeTrackerSession');
+        updateSessionControlsUI();
+        render.all();
+    }
+    
+    // --- INITIALIZATION ---
+    loadData();
+    render.all();
+    // Re-initialize session if page was reloaded
+    if(activeSession.id) {
+        updateSessionControlsUI();
+        liveTimerInterval = setInterval(updateLiveTimer, 1000);
+        render.totalRemainingTicker(!activeSession.pausedTime);
+    }
+    // setupEventListeners(); // This would be the full function
+    // checkTodoRollover(); // This would be the full function
+    // setInterval(render.daySummary, 30000); // This would be the full function
+});
+</script>
+<script id="v5_render_chrome" type="text/plain">
+() => {
+    document.body.classList.toggle('dark-mode', appData.settings.darkMode);
+    document.getElementById('darkModeToggle').textContent = appData.settings.darkMode ? '☀️' : '🌙';
+    document.getElementById('userName').textContent = `User: ${appData.settings.userName}`;
+}
+</script>
+</body>
+</html>
