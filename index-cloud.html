@@ -842,54 +842,76 @@
         }
 
         function stopWork() {
-            if (currentSession) {
-                document.getElementById('sessionNotes').classList.add('show');
-                document.getElementById('notesInput').focus();
-            }
+    if (currentSession) {
+        // End the session immediately
+        currentSession.end = new Date().toISOString();
+        currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
+
+        // Push the session (notes will be added later)
+        memoryStorage.todayData.sessions.push(currentSession);
+
+        // Update totals based on type
+        if (currentSession.type === 'work') {
+            memoryStorage.todayData.totalWorkTime += currentSession.duration;
+            memoryStorage.todayData.slotsCompleted = Math.floor(
+                memoryStorage.todayData.totalWorkTime / memoryStorage.settings.slotDuration
+            );
+        } else {
+            memoryStorage.todayData.totalBreakTime += currentSession.duration;
         }
 
-        function saveSessionNote() {
-            if (currentSession) {
-                currentSession.end = new Date().toISOString();
-                currentSession.notes = document.getElementById('notesInput').value;
-                currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
-                
-                memoryStorage.todayData.sessions.push(currentSession);
-                
-                if (currentSession.type === 'work') {
-                    memoryStorage.todayData.totalWorkTime += currentSession.duration;
-                    memoryStorage.todayData.slotsCompleted = Math.floor(
-                        memoryStorage.todayData.totalWorkTime / memoryStorage.settings.slotDuration
-                    );
-                } else {
-                    memoryStorage.todayData.totalBreakTime += currentSession.duration;
-                }
-                
-                saveData();
-                currentSession = null;
-                document.getElementById('notesInput').value = '';
-                document.getElementById('sessionNotes').classList.remove('show');
-            }
+        // Save data immediately (without notes yet)
+        saveData();
 
-            isWorking = false;
-            onBreak = false;
-            sessionStartTime = null;
-            breakStartTime = null;
+        // Clear current session reference
+        currentSession = null;
 
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            document.getElementById('breakBtn').disabled = true;
-            document.getElementById('currentStatus').textContent = 'Idle';
-            
-            if (updateInterval) {
-                clearInterval(updateInterval);
-                updateInterval = null;
-            }
-            
-            updateDisplay();
-            displayTodaySessions();
+        // Stop timer and update state/UI
+        isWorking = false;
+        onBreak = false;
+        sessionStartTime = null;
+        breakStartTime = null;
+        if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
         }
+        document.getElementById('currentStatus').textContent = 'Idle';
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+        document.getElementById('breakBtn').disabled = true;
 
+        // Show notes section for adding achievement notes
+        document.getElementById('sessionNotes').classList.add('show');
+        document.getElementById('notesInput').focus();
+        document.getElementById('startBtn').disabled = true;
+document.getElementById('breakBtn').disabled = true;
+// Re-enable in saveSessionNote() after hiding notes
+document.getElementById('startBtn').disabled = false;
+document.getElementById('breakBtn').disabled = true; // Keep disabled since session ended
+    }
+}
+
+       function saveSessionNote() {
+    // Get the last pushed session (the one just ended)
+    const lastSession = memoryStorage.todayData.sessions[memoryStorage.todayData.sessions.length - 1];
+    console.log('Save button clicked');
+
+    if (lastSession) {
+        // Add notes to the last session
+        lastSession.notes = document.getElementById('notesInput').value;
+
+        // Save updated data (with notes)
+        saveData();
+    }
+
+    // Clear input and hide notes section
+    document.getElementById('notesInput').value = '';
+    document.getElementById('sessionNotes').classList.remove('show');
+
+    // Update UI
+    updateDisplay();
+    displayTodaySessions();
+}
         function toggleBreak() {
             if (onBreak) {
                 breakStartTime = null;
@@ -922,6 +944,9 @@
                     currentSession.notes = 'Auto-saved before break';
                     memoryStorage.todayData.sessions.push(currentSession);
                     memoryStorage.todayData.totalWorkTime += currentSession.duration;
+                    memoryStorage.todayData.slotsCompleted = Math.floor(
+    memoryStorage.todayData.totalWorkTime / memoryStorage.settings.slotDuration
+);
                     saveData();
                 }
                 
