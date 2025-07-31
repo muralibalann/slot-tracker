@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Personal Tracker</title>
+    <meta name="theme-color" content="#4A5568">
+    <style>
+        :root {
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --primary-light: #4299e1; --primary-dark: #63b3ed;
+            --bg-light: #f7fafc;      --bg-dark: #1a202c;
+            --card-light: #ffffff;    --card-dark: #2d3748;
+            --text-light: #2d3748;    --text-dark: #e2e8f0;
+            --border-light: #e2e8f0;  --border-dark: #4a5568;
+            --green: #48bb78; --red: #f56565; --yellow: #ecc94b; --blue: #4299e1;
+        }
+        /* --- Base & Dark Mode --- */
+        body { font-family: var(--font-sans); margin: 0; padding: 10px 20px; background-color: var(--bg-light); color: var(--text-light); transition: background-color 0.3s, color 0.3s; }
+        body.dark-mode { background-color: var(--bg-dark); color: var(--text-dark); }
+        /* --- Layout & Components --- */
+        .container { max-width: 1200px; margin: 0 auto; background-color: var(--card-light); border-radius: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); padding: 25px; transition: background-color 0.3s; }
+        body.dark-mode .container { background-color: var(--card-dark); }
+        h1, h2, h3 { color: inherit; margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; }
+        body.dark-mode h1, body.dark-mode h2, body.dark-mode h3 { border-color: var(--border-dark); }
+        .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+        .tabs { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+        button, .button { padding: 10px 15px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; font-size: 0.9rem; }
+        .tab { background: transparent; color: #718096; }
+        body.dark-mode .tab { color: #a0aec0; }
+        .tab.active { background-color: var(--primary-light); color: white; }
+        body.dark-mode .tab.active { background-color: var(--primary-dark); }
+        .btn-green { background: var(--green); color: white; } .btn-red { background: var(--red); color: white; } .btn-yellow { background: var(--yellow); color: #1a202c; } .btn-blue { background: var(--blue); color: white; }
+        .btn-icon { background: transparent; padding: 5px; font-size: 1.2rem; border: none; }
+        /* --- Tables --- */
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .data-table th, .data-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-light); }
+        body.dark-mode .data-table th, body.dark-mode .data-table td { border-color: var(--border-dark); }
+        .data-table th { background-color: #edf2f7; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; }
+        body.dark-mode .data-table th { background-color: #2d3748; }
+        /* --- Progress Bar --- */
+        .progress-bar-container { width: 100%; background-color: #edf2f7; border-radius: 10px; height: 16px; overflow: hidden; position: relative; }
+        body.dark-mode .progress-bar-container { background-color: #4a5568; }
+        .progress-bar { height: 100%; transition: width 0.5s ease-in-out; }
+        /* --- Forms & Modals --- */
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 1rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+        input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid var(--border-light); background-color: #fff; color: var(--text-light); }
+        body.dark-mode input, body.dark-mode select, body.dark-mode textarea { border-color: var(--border-dark); background-color: #2d3748; color: var(--text-dark); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card-light); padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; }
+        body.dark-mode .modal-content { background-color: var(--card-dark); }
+        /* --- Specific Elements --- */
+        #session-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 1.5rem; }
+        #live-timer { font-size: 1.2rem; font-weight: bold; margin-left: auto; color: var(--green); }
+        .notification-banner { padding: 15px; background-color: var(--yellow); color: #1a202c; border-radius: 8px; margin-bottom: 1rem; }
+        .priority-high { color: var(--red); } .priority-medium { color: var(--yellow); } .priority-low { color: #a0aec0; }
+        .task-completed { text-decoration: line-through; opacity: 0.6; }
+        .history-day { border: 1px solid var(--border-light); border-radius: 8px; margin-bottom: 1rem; }
+        body.dark-mode .history-day { border-color: var(--border-dark); }
+        .history-header { padding: 15px; font-weight: bold; cursor: pointer; background-color: #f7fafc; }
+        body.dark-mode .history-header { background-color: #2d3748; }
+        .history-content { padding: 15px; display: none; }
+
+        @media (max-width: 768px) {
+            body { padding: 10px; } .container { padding: 15px; } .data-table { font-size: 0.8rem; }
+            .header-controls { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header-controls">
+            <h1>Personal Dashboard</h1>
+            <div class="user-controls" style="display:flex; align-items:center; gap:15px;">
+                <span id="userName">User: guest</span>
+                <button id="darkModeToggle">🌙</button>
+            </div>
+        </div>
+        <div id="notification-area"></div>
+        <div class="tabs">
+            <button class="tab active" data-tab="today">Today</button>
+            <button class="tab" data-tab="history">History</button>
+            <button class="tab" data-tab="expenses">Expenses</button>
+            <button class="tab" data-tab="goals">Goals</button>
+            <button class="tab" data-tab="todos">To-Do</button>
+            <button class="tab" data-tab="settings">Settings</button>
+        </div>
+
+        <div class="tab-content" id="today-content">
+            <div id="session-controls">
+                <select id="categorySelect"></select>
+                <button class="btn-green" id="startBtn">Start</button>
+                <button class="btn-yellow" id="pauseBtn" style="display: none;">Pause</button>
+                <button class="btn-red" id="stopBtn" style="display: none;">Stop</button>
+                <span id="live-timer"></span>
+            </div>
+            
+            <h3>Today's Progress</h3>
+            <table class="data-table">
+                <thead><tr><th data-sort="name">Category</th><th data-sort="target">Target</th><th data-sort="actual">Actual</th><th data-sort="remaining">Remaining</th><th style="width: 25%;">Progress</th></tr></thead>
+                <tbody id="progressTableBody"></tbody>
+                <tfoot><tr style="font-weight: bold;"><td colspan="1">Total</td><td id="totalTarget"></td><td id="totalActual"></td><td id="totalRemaining"></td><td></td></tr></tfoot>
+            </table>
+
+            <h3 style="margin-top: 2rem;">Today's Sessions Log</h3>
+            <table class="data-table">
+                <thead><tr><th data-sort="startTime">Start</th><th data-sort="endTime">End</th><th data-sort="duration">Duration</th><th data-sort="type">Category</th><th>Notes</th><th>Actions</th></tr></thead>
+                <tbody id="sessionLogBody"></tbody>
+            </table>
+        </div>
+
+        <div class="tab-content" id="history-content" style="display: none;">
+             <h3>History</h3>
+             <div class="form-grid">
+                <input type="date" id="historyDateFilter">
+                <button id="clearHistoryFilter">Show All</button>
+             </div>
+             <div id="historyContainer"></div>
+        </div>
+        
+        <div class="tab-content" id="expenses-content" style="display: none;">
+            <h3>Log New Expense</h3>
+            <form id="expenseForm" class="form-grid">
+                <div class="form-group"><label for="expDate">Date</label><input type="date" id="expDate" required></div>
+                <div class="form-group"><label for="expAmount">Amount</label><input type="number" id="expAmount" required min="0.01" step="0.01"></div>
+                <div class="form-group"><label for="expCurrency">Currency</label><select id="expCurrency"><option>USD</option><option>EUR</option><option>GBP</option><option>INR</option></select></div>
+                <div class="form-group"><label for="expCategory">Category</label><select id="expCategory"></select></div>
+                <div class="form-group" style="grid-column: 1 / -1;"><label for="expDesc">Description</label><textarea id="expDesc" rows="2"></textarea></div>
+                <button type="submit" class="btn-blue" style="align-self: flex-end;">Add Expense</button>
+            </form>
+            <h3>All Expenses</h3>
+            <table class="data-table">
+                <thead><tr><th>Date</th><th>Amount</th><th>Category</th><th>Description</th><th>Actions</th></tr></thead>
+                <tbody id="expensesTableBody"></tbody>
+            </table>
+        </div>
+        
+        <div class="tab-content" id="goals-content" style="display: none;"><h3>Goals</h3><p>This feature for setting weekly/monthly goals is coming soon.</p></div>
+        
+        <div class="tab-content" id="todos-content" style="display: none;">
+            <h3>Add New To-Do Task</h3>
+            <form id="todoForm" class="form-grid">
+                 <div class="form-group" style="grid-column: 1 / -1;"><label for="todoTitle">Title</label><input type="text" id="todoTitle" required></div>
+                 <div class="form-group"><label for="todoCategory">Category</label><select id="todoCategory"></select></div>
+                 <div class="form-group"><label for="todoPriority">Priority</label><select id="todoPriority"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+                 <div class="form-group"><label for="todoDueDate">Due Date</label><input type="date" id="todoDueDate"></div>
+                 <button type="submit" class="btn-blue" style="align-self: flex-end;">Add Task</button>
+            </form>
+             <h3>To-Do List</h3>
+            <table class="data-table">
+                <thead><tr><th>Status</th><th>Title</th><th>Category</th><th>Priority</th><th>Due</th><th>Actions</th></tr></thead>
+                <tbody id="todosTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="tab-content" id="settings-content" style="display: none;">
+            <h3>Categories & Targets</h3>
+            <table class="data-table">
+                 <thead><tr><th>Category</th><th>Code</th><th>Color</th><th>Target (Hours)</th><th>Actions</th></tr></thead>
+                 <tbody id="categorySettingsBody"></tbody>
+            </table>
+            <form id="newCategoryForm" class="form-grid" style="margin-top: 1rem;">
+                <input type="text" id="newCatName" placeholder="New Category Name" required>
+                <input type="text" id="newCatCode" placeholder="Code (e.g., HW)" required maxlength="3">
+                <input type="color" id="newCatColor" value="#4299e1">
+                <button type="submit" class="btn-blue">Add</button>
+            </form>
+            <h3 style="margin-top: 2rem;">Data Management</h3>
+            <div style="display:flex; gap: 1rem; flex-wrap: wrap;">
+                <button id="exportDataBtn" class="button">Export All Data (JSON)</button>
+                <label class="button">Import Data <input type="file" id="importDataInput" accept=".json" style="display:none;"></label>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="editSessionModal">
+        <div class="modal-content">
+            <h3>Edit Session</h3>
+            <form id="editSessionForm">
+                <input type="hidden" id="editSessionId">
+                <div class="form-group"><label for="editSessionNotes">Notes</label><textarea id="editSessionNotes" rows="4"></textarea></div>
+                <div class="form-group"><label for="editSessionDuration">Duration (minutes)</label><input type="number" id="editSessionDuration" min="1"></div>
+                <div style="display:flex; justify-content:flex-end; gap:1rem;">
+                    <button type="button" id="cancelEditBtn" class="button">Cancel</button>
+                    <button type="submit" class="btn-blue">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+"use strict";
+document.addEventListener('DOMContentLoaded', () => {
+    // --- APP STATE & CONFIG ---
+    let appData = {};
+    let activeSession = { id: null };
+    let liveTimerInterval = null;
+    let uiUpdateScheduled = false;
+
+    // --- UTILITIES ---
+    const utils = {
+        generateId: () => `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        formatTime: (totalMinutes) => {
+            if (isNaN(totalMinutes) || totalMinutes < 0) return '0h 0m';
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = Math.floor(totalMinutes % 60);
+            return `${hours}h ${minutes}m`;
+        },
+        formatTimer: (totalSeconds) => {
+            totalSeconds = Math.floor(totalSeconds);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        },
+        getTodayDateString: () => new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+        debounce: (func, delay) => {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+    };
+
+    // --- DATA PERSISTENCE ---
+    function loadData() {
+        const defaultData = {
+            settings: {
+                darkMode: false,
+                userName: "guest",
+                categories: {
+                    'MZ': { name: 'Mizuho Work', color: '#e53e3e', target: 4 },
+                    'GC': { name: 'Grand Cholas', color: '#dd6b20', target: 1 },
+                    'AI': { name: 'AI Projects', color: '#3182ce', target: 6 },
+                    'Fly': { name: 'Family', color: '#38a169', target: 1 },
+                    'Brk': { name: 'Break', color: '#d69e2e', target: 4 },
+                    'Slp': { name: 'Sleep', color: '#805ad5', target: 8 },
+                }
+            },
+            sessions: {},
+            todos: [],
+            expenses: []
+        };
+        try {
+            const savedData = localStorage.getItem('personalTrackerData_v4');
+            appData = savedData ? JSON.parse(savedData) : defaultData;
+            if (!appData.settings || !appData.settings.categories) appData.settings = defaultData.settings;
+        } catch (error) {
+            console.error("Error loading data from localStorage:", error);
+            appData = defaultData;
+        }
+        const today = utils.getTodayDateString();
+        if (!appData.sessions[today]) appData.sessions[today] = [];
+    }
+
+    function saveData() {
+        try {
+            localStorage.setItem('personalTrackerData_v4', JSON.stringify(appData));
+        } catch (error) {
+            console.error("Error saving data to localStorage:", error);
+            alert("Could not save data. Your browser storage might be full.");
+        }
+    }
+    
+    const debouncedSaveData = utils.debounce(saveData, 500);
+
+    // --- UI RENDERING ---
+    const render = {
+        all: () => {
+            if (uiUpdateScheduled) return;
+            uiUpdateScheduled = true;
+            requestAnimationFrame(() => {
+                render.chrome();
+                render.progressTable();
+                render.sessionLog();
+                render.settings();
+                render.todos();
+                render.expenses();
+                render.history();
+                render.selectors();
+                uiUpdateScheduled = false;
+            });
+        },
+        chrome: () => {
+            document.body.classList.toggle('dark-mode', appData.settings.darkMode);
+            document.getElementById('darkModeToggle').textContent = appData.settings.darkMode ? '☀️' : '🌙';
+            document.getElementById('userName').textContent = `User: ${appData.settings.userName}`;
+        },
+        progressTable: () => {
+            const today = utils.getTodayDateString();
+            const sessionsToday = appData.sessions[today] || [];
+            const categories = appData.settings.categories;
+            const categoryTotals = Object.keys(categories).reduce((acc, code) => ({...acc, [code]: 0}), {});
+            sessionsToday.forEach(s => { categoryTotals[s.type] += s.duration; });
+            const tableBody = document.getElementById('progressTableBody');
+            tableBody.innerHTML = '';
+            let totalTarget = 0, totalActual = 0;
+            Object.keys(categories).forEach(code => {
+                const cat = categories[code];
+                const targetMins = (cat.target || 0) * 60;
+                const actualMins = categoryTotals[code] || 0;
+                totalTarget += targetMins;
+                totalActual += actualMins;
+                const remainingMins = targetMins - actualMins;
+                const progress = targetMins > 0 ? Math.min(100, (actualMins / targetMins) * 100) : 0;
+                const overage = actualMins > targetMins;
+                tableBody.innerHTML += `
+                    <tr>
+                        <td><strong style="color:${cat.color};">${cat.name}</strong></td>
+                        <td>${utils.formatTime(targetMins)}</td>
+                        <td>${utils.formatTime(actualMins)}</td>
+                        <td style="color:${overage ? 'var(--red)' : 'inherit'};">${overage ? 'Over by ' : ''}${utils.formatTime(Math.abs(remainingMins))}</td>
+                        <td><div class="progress-bar-container"><div class="progress-bar" style="width: ${progress}%; background-color:${overage ? 'var(--red)' : cat.color};"></div></div></td>
+                    </tr>`;
+            });
+            document.getElementById('totalTarget').textContent = utils.formatTime(totalTarget);
+            document.getElementById('totalActual').textContent = utils.formatTime(totalActual);
+            document.getElementById('totalRemaining').textContent = utils.formatTime(Math.max(0, totalTarget - totalActual));
+        },
+        sessionLog: () => {
+            const today = utils.getTodayDateString();
+            const logBody = document.getElementById('sessionLogBody');
+            logBody.innerHTML = '';
+            [...(appData.sessions[today] || [])].reverse().forEach(s => {
+                const cat = appData.settings.categories[s.type];
+                logBody.innerHTML += `
+                    <tr>
+                        <td>${new Date(s.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>${new Date(s.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                        <td>${utils.formatTime(s.duration)}</td>
+                        <td style="color:${cat?.color || '#ccc'}; font-weight: bold;">${cat?.name || 'Deleted'}</td>
+                        <td>${s.notes || '-'}</td>
+                        <td>
+                            <button class="btn-icon" data-action="edit-session" data-id="${s.id}">✏️</button>
+                            <button class="btn-icon" data-action="delete-session" data-id="${s.id}">🗑️</button>
+                        </td>
+                    </tr>`;
+            });
+        },
+        settings: () => { /* Rendered via event handlers to avoid input focus loss */ },
+        todos: () => {
+            const todoBody = document.getElementById('todosTableBody');
+            todoBody.innerHTML = '';
+            appData.todos.forEach(todo => {
+                const cat = appData.settings.categories[todo.category];
+                const row = document.createElement('tr');
+                row.className = todo.completed ? 'task-completed' : '';
+                row.innerHTML = `
+                    <td><input type="checkbox" data-action="toggle-todo" data-id="${todo.id}" ${todo.completed ? 'checked' : ''}></td>
+                    <td>${todo.title}</td>
+                    <td style="color:${cat?.color || '#ccc'}; font-weight:bold;">${cat?.name || 'Deleted'}</td>
+                    <td class="priority-${todo.priority}">${todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}</td>
+                    <td>${todo.dueDate || '-'}</td>
+                    <td>
+                        <button class="btn-green" data-action="start-todo-session" data-id="${todo.id}" ${todo.completed ? 'disabled' : ''}>▶️</button>
+                        <button class="btn-icon" data-action="delete-todo" data-id="${todo.id}">🗑️</button>
+                    </td>`;
+                todoBody.appendChild(row);
+            });
+        },
+        expenses: () => {
+            const expenseBody = document.getElementById('expensesTableBody');
+            expenseBody.innerHTML = '';
+            [...appData.expenses].reverse().forEach(exp => {
+                expenseBody.innerHTML += `
+                    <tr>
+                        <td>${exp.date}</td>
+                        <td>${exp.amount.toFixed(2)} ${exp.currency}</td>
+                        <td>${exp.category}</td>
+                        <td>${exp.description}</td>
+                        <td><button class="btn-icon" data-action="delete-expense" data-id="${exp.id}">🗑️</button></td>
+                    </tr>`;
+            });
+        },
+        history: () => { /* Complex render in its handler */ },
+        selectors: () => {
+            const selects = ['categorySelect', 'todoCategory', 'expCategory'];
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                const currentVal = select.value;
+                select.innerHTML = '';
+                Object.keys(appData.settings.categories).forEach(code => {
+                    const cat = appData.settings.categories[code];
+                    select.innerHTML += `<option value="${code}">${cat.name}</option>`;
+                });
+                if (id === 'expCategory') select.innerHTML += `<option value="Other">Other</option>`;
+                select.value = currentVal;
+            });
+        }
+    };
+
+    // --- SESSION MANAGEMENT ---
+    function startSession(categoryCode, todoId = null) {
+        if (activeSession.id) return alert("A session is already running.");
+        activeSession = {
+            id: utils.generateId(), startTime: Date.now(), pausedTime: null,
+            totalPausedDuration: 0, type: categoryCode, todoId: todoId,
+        };
+        updateSessionControlsUI();
+        liveTimerInterval = setInterval(updateLiveTimer, 1000);
+    }
+    
+    function pauseSession(isPausing) {
+        if (!activeSession.id) return;
+        if (isPausing && !activeSession.pausedTime) {
+            activeSession.pausedTime = Date.now();
+            clearInterval(liveTimerInterval);
+        } else if (!isPausing && activeSession.pausedTime) {
+            activeSession.totalPausedDuration += Date.now() - activeSession.pausedTime;
+            activeSession.pausedTime = null;
+            liveTimerInterval = setInterval(updateLiveTimer, 1000);
+        }
+        updateSessionControlsUI();
+    }
+
+    function stopSession() {
+        if (!activeSession.id) return;
+        pauseSession(true); // Ensure timer is stopped
+        // For simplicity, we just save and end. A notes modal could be re-added here.
+        saveAndEndSession();
+    }
+    
+    function saveAndEndSession() {
+        const endTime = Date.now();
+        const durationMs = endTime - activeSession.startTime - activeSession.totalPausedDuration;
+        const durationMins = Math.round(durationMs / 60000);
+
+        if (durationMins > 0) {
+            const today = utils.getTodayDateString();
+            appData.sessions[today].push({
+                id: activeSession.id, startTime: activeSession.startTime, endTime,
+                duration: durationMins, type: activeSession.type,
+                notes: `Session for ${appData.settings.categories[activeSession.type].name}`, todoId: activeSession.todoId
+            });
+            debouncedSaveData();
+        }
+        clearInterval(liveTimerInterval);
+        activeSession = { id: null };
+        updateSessionControlsUI();
+        render.all();
+    }
+
+    // --- UI LOGIC ---
+    function updateSessionControlsUI() {
+        const isRunning = !!activeSession.id;
+        document.getElementById('startBtn').style.display = isRunning ? 'none' : 'inline-block';
+        document.getElementById('categorySelect').disabled = isRunning;
+        document.getElementById('pauseBtn').style.display = isRunning ? 'inline-block' : 'none';
+        document.getElementById('stopBtn').style.display = isRunning ? 'inline-block' : 'none';
+        document.getElementById('live-timer').textContent = isRunning ? utils.formatTimer(0) : '';
+
+        if (isRunning) {
+            const pauseBtn = document.getElementById('pauseBtn');
+            const isPaused = !!activeSession.pausedTime;
+            pauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
+            pauseBtn.classList.toggle('btn-green', isPaused);
+            pauseBtn.classList.toggle('btn-yellow', !isPaused);
+        }
+    }
+
+    function updateLiveTimer() {
+        if (!activeSession.id || activeSession.pausedTime) return;
+        const elapsedSeconds = (Date.now() - activeSession.startTime - activeSession.totalPausedDuration) / 1000;
+        document.getElementById('live-timer').textContent = utils.formatTimer(elapsedSeconds);
+    }
+    
+    function checkTodoRollover() {
+        const today = utils.getTodayDateString();
+        let rolledOverCount = 0;
+        appData.todos.forEach(todo => {
+            if (!todo.completed && todo.dueDate && todo.dueDate < today) {
+                todo.dueDate = today;
+                rolledOverCount++;
+            }
+        });
+        if (rolledOverCount > 0) {
+            document.getElementById('notification-area').innerHTML = `<div class="notification-banner">${rolledOverCount} task(s) were rolled over to today.</div>`;
+            debouncedSaveData();
+        }
+    }
+
+    // --- EVENT LISTENERS ---
+    function setupEventListeners() {
+        document.addEventListener('click', e => {
+            const action = e.target.dataset.action;
+            if (!action) return;
+
+            const id = e.target.dataset.id || e.target.closest('[data-id]')?.dataset.id;
+            const code = e.target.dataset.code || e.target.closest('[data-code]')?.dataset.code;
+
+            const actions = {
+                'delete-session': () => {
+                    const today = utils.getTodayDateString();
+                    appData.sessions[today] = appData.sessions[today].filter(s => s.id !== id);
+                    render.all();
+                    debouncedSaveData();
+                },
+                'edit-session': () => {
+                    const today = utils.getTodayDateString();
+                    const session = appData.sessions[today].find(s => s.id === id);
+                    if (!session) return;
+                    document.getElementById('editSessionId').value = session.id;
+                    document.getElementById('editSessionNotes').value = session.notes;
+                    document.getElementById('editSessionDuration').value = session.duration;
+                    document.getElementById('editSessionModal').style.display = 'flex';
+                },
+                'toggle-todo': () => {
+                    const todo = appData.todos.find(t => t.id === id);
+                    if (todo) todo.completed = e.target.checked;
+                    render.todos();
+                    debouncedSaveData();
+                },
+                'delete-todo': () => {
+                    appData.todos = appData.todos.filter(t => t.id !== id);
+                    render.todos();
+                    debouncedSaveData();
+                },
+                'start-todo-session': () => {
+                    const todo = appData.todos.find(t => t.id === id);
+                    if (todo) {
+                        startSession(todo.category, id);
+                        document.querySelector('.tab[data-tab="today"]').click();
+                    }
+                },
+                'delete-expense': () => {
+                    appData.expenses = appData.expenses.filter(ex => ex.id !== id);
+                    render.expenses();
+                    debouncedSaveData();
+                },
+                'delete-category': () => {
+                    if(confirm(`Delete category "${appData.settings.categories[code].name}"? This cannot be undone.`)){
+                        delete appData.settings.categories[code];
+                        render.all();
+                        debouncedSaveData();
+                    }
+                },
+                'history-toggle': () => e.target.nextElementSibling.style.display = e.target.nextElementSibling.style.display === 'block' ? 'none' : 'block'
+            };
+
+            if (actions[action]) actions[action]();
+        });
+
+        // Tab Navigation
+        document.querySelector('.tabs').addEventListener('click', e => {
+            if (e.target.matches('.tab')) {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                e.target.classList.add('active');
+                document.getElementById(`${e.target.dataset.tab}-content`).style.display = 'block';
+            }
+        });
+        
+        // Session Controls
+        document.getElementById('startBtn').addEventListener('click', () => startSession(document.getElementById('categorySelect').value));
+        document.getElementById('pauseBtn').addEventListener('click', () => pauseSession(!activeSession.pausedTime));
+        document.getElementById('stopBtn').addEventListener('click', stopSession);
+
+        // Edit Session Modal
+        document.getElementById('editSessionForm').addEventListener('submit', e => {
+            e.preventDefault();
+            const id = document.getElementById('editSessionId').value;
+            const today = utils.getTodayDateString();
+            const session = appData.sessions[today].find(s => s.id === id);
+            if(session){
+                session.notes = document.getElementById('editSessionNotes').value;
+                session.duration = parseInt(document.getElementById('editSessionDuration').value, 10);
+                debouncedSaveData();
+                render.all();
+            }
+            document.getElementById('editSessionModal').style.display = 'none';
+        });
+        document.getElementById('cancelEditBtn').addEventListener('click', () => document.getElementById('editSessionModal').style.display = 'none');
+
+        // Other Forms
+        const forms = {
+            'newCategoryForm': (data) => {
+                if (data.newCatName && data.newCatCode && !appData.settings.categories[data.newCatCode]) {
+                    appData.settings.categories[data.newCatCode] = { name: data.newCatName, color: data.newCatColor, target: 0 };
+                } else alert('Invalid name/code or code already exists.');
+            },
+            'todoForm': (data) => {
+                if (data.todoTitle) {
+                    appData.todos.push({
+                        id: utils.generateId(), title: data.todoTitle, category: data.todoCategory,
+                        priority: data.todoPriority, dueDate: data.todoDueDate || null, completed: false,
+                    });
+                }
+            },
+            'expenseForm': (data) => {
+                if (data.expDate && data.expAmount > 0) {
+                    appData.expenses.push({
+                        id: utils.generateId(), date: data.expDate, amount: parseFloat(data.expAmount),
+                        currency: data.expCurrency, category: data.expCategory, description: data.expDesc,
+                    });
+                }
+            }
+        };
+
+        Object.keys(forms).forEach(id => {
+            document.getElementById(id).addEventListener('submit', e => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Manually get values for elements without name attributes
+                const formElements = e.target.elements;
+                for (let i = 0; i < formElements.length; i++) {
+                    if (formElements[i].id && !data[formElements[i].id]) {
+                        data[formElements[i].id] = formElements[i].value;
+                    }
+                }
+                
+                forms[id](data);
+                debouncedSaveData();
+                render.all();
+                e.target.reset();
+                if(id === 'expenseForm') document.getElementById('expDate').value = utils.getTodayDateString();
+            });
+        });
+        
+        // Settings Inputs
+        document.getElementById('categorySettingsBody').addEventListener('change', e => {
+            if (e.target.matches('input')) {
+                const { code, field } = e.target.dataset;
+                const value = e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value;
+                if (appData.settings.categories[code] && value !== undefined) {
+                    appData.settings.categories[code][field] = value;
+                    debouncedSaveData();
+                    render.all();
+                }
+            }
+        });
+        
+        // Data Management
+        document.getElementById('exportDataBtn').addEventListener('click', () => {
+            const dataStr = JSON.stringify(appData, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `personal-tracker-backup-${utils.getTodayDateString()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('importDataInput').addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    if (importedData.settings && importedData.sessions) { // Basic validation
+                        if(confirm("This will overwrite all current data. Are you sure?")) {
+                            appData = importedData;
+                            saveData();
+                            render.all();
+                            alert("Data imported successfully!");
+                        }
+                    } else {
+                        alert("Invalid data file.");
+                    }
+                } catch (error) {
+                    alert("Error reading file. Please ensure it's a valid JSON backup.");
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    // --- INITIALIZE THE APP ---
+    loadData();
+    render.all();
+    setupEventListeners();
+    checkTodoRollover();
+    document.getElementById('expDate').value = utils.getTodayDateString();
+});
+</script>
+</body>
+</html>
