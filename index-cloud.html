@@ -1,18 +1,469 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Tracker - Cloud Sync</title>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiU2xvdCBUcmFja2VyIENsb3VkIiwic2hvcnRfbmFtZSI6IlNsb3RUcmFja2VyIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmZmZmZmYiLCJ0aGVtZV9jb2xvciI6IiM2NjdlZWEiLCJvcmllbnRhdGlvbiI6InBvcnRyYWl0In0=">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
-  authDomain: "slot-tracker-c7ec1.firebaseapp.com",
-  databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
-  projectId: "slot-tracker-c7ec1",
-  storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
-  messagingSenderId: "639902490570",
-  appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
-};
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .sync-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sync-status.synced {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .sync-status.syncing {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .sync-status.offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .sync-status::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            display: inline-block;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+        }
+
+        .user-section {
+            background: #f0f9ff;
+            border: 2px solid #0284c7;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .user-section input {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            margin: 0 10px;
+            font-size: 1em;
+        }
+
+        .user-section button {
+            padding: 8px 20px;
+            background: #0284c7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .user-section button:hover {
+            background: #0369a1;
+        }
+
+        /* Copy all other styles from the original tracker */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            font-size: 1em;
+            cursor: pointer;
+            color: #64748b;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .status-card h3 {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status-card.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .status-card.primary h3 {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .status-card.primary .value {
+            color: white;
+        }
+
+        .warning {
+            background: #fee;
+            border: 2px solid #f66;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .warning.show {
+            display: block;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .start-btn {
+            background: #4ade80;
+            color: white;
+        }
+
+        .stop-btn {
+            background: #f87171;
+            color: white;
+        }
+
+        .break-btn {
+            background: #fbbf24;
+            color: white;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .session-notes {
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .session-notes.show {
+            display: block;
+        }
+
+        .session-notes textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .settings {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .settings-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .history-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .history-item .notes {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-style: italic;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div class="sync-status" id="syncStatus">
+        <span id="syncText">Offline</span>
+    </div>
+
+    <div class="container">
+        <h1>Slot Tracker - Cloud Sync</h1>
+        
+        <div class="user-section" id="userSection">
+            <strong>Enter a unique ID to sync across devices:</strong>
+            <input type="text" id="userId" placeholder="e.g., john-smith-2024" pattern="[a-z0-9-]+" maxlength="50">
+            <button onclick="setUserId()">Start Syncing</button>
+            <p style="margin-top: 10px; font-size: 0.85em; color: #64748b;">
+                Use the same ID on all your devices to sync data automatically
+            </p>
+        </div>
+
+        <div id="mainContent" style="display: none;">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('today')">Today</button>
+                <button class="tab" onclick="switchTab('history')">History</button>
+                <button class="tab" onclick="switchTab('settings')">Settings</button>
+            </div>
+
+            <!-- Copy all tab content from original tracker -->
+            <div id="today-tab" class="tab-content active">
+                <!-- All today tab content -->
+            </div>
+
+            <div id="history-tab" class="tab-content">
+                <!-- All history tab content -->
+            </div>
+
+            <div id="settings-tab" class="tab-content">
+                <!-- All settings tab content -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration - REPLACE WITH YOUR OWN CONFIG
+        const firebaseConfig = {
+            // You'll get these values from Firebase Console
+             apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
+             authDomain: "slot-tracker-c7ec1.firebaseapp.com",
+             databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
+             projectId: "slot-tracker-c7ec1",
+             storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
+             messagingSenderId: "639902490570",
+             appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
+        };
+
+        // Initialize Firebase
+        let app, database, userRef;
+        let currentUserId = localStorage.getItem('slotTrackerUserId');
+        
+        // Initialize Firebase when user ID is set
+        function initializeFirebase() {
+            if (!app) {
+                app = firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+            }
+            
+            if (currentUserId) {
+                userRef = database.ref('users/' + currentUserId);
+                setupRealtimeSync();
+                document.getElementById('userSection').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                updateSyncStatus('syncing');
+            }
+        }
+
+        function setUserId() {
+            const input = document.getElementById('userId');
+            const userId = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+            
+            if (userId.length < 3) {
+                alert('Please enter at least 3 characters for your ID');
+                return;
+            }
+            
+            currentUserId = userId;
+            localStorage.setItem('slotTrackerUserId', userId);
+            initializeFirebase();
+        }
+
+        function setupRealtimeSync() {
+            // Listen for changes from other devices
+            userRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data && data.lastUpdated !== localStorage.getItem('lastSyncTime')) {
+                    memoryStorage = data.data || memoryStorage;
+                    localStorage.setItem('lastSyncTime', data.lastUpdated);
+                    updateDisplay();
+                    displayTodaySessions();
+                    updateSyncStatus('synced');
+                }
+            });
+        }
+
+        function syncToCloud() {
+            if (!userRef) return;
+            
+            const syncData = {
+                data: memoryStorage,
+                lastUpdated: new Date().toISOString(),
+                device: navigator.userAgent.substring(0, 50)
+            };
+            
+            userRef.set(syncData).then(() => {
+                localStorage.setItem('lastSyncTime', syncData.lastUpdated);
+                updateSyncStatus('synced');
+            }).catch((error) => {
+                console.error('Sync error:', error);
+                updateSyncStatus('offline');
+            });
+        }
+
+        function updateSyncStatus(status) {
+            const statusEl = document.getElementById('syncStatus');
+            const textEl = document.getElementById('syncText');
+            
+            statusEl.className = 'sync-status ' + status;
+            
+            switch(status) {
+                case 'synced':
+                    textEl.textContent = 'Synced';
+                    break;
+                case 'syncing':
+                    textEl.textContent = 'Syncing...';
+                    break;
+                case 'offline':
+                    textEl.textContent = 'Offline';
+                    break;
+            }
+        }
+
+        // Override the original saveData function to include cloud sync
+        const originalSaveData = saveData;
+        function saveData() {
+            originalSaveData();
+            syncToCloud();
+        }
+
+        // Check for existing user ID on load
+        if (currentUserId) {
+            document.getElementById('userId').value = currentUserId;
+            initializeFirebase();
+        }
+
+        // Add all the original tracker functions here...
+        // (Copy all JavaScript from the original tracker)
+    </script>
+</body>
+</html>
