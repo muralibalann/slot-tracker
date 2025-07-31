@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Category Time Tracker</title>
+    <meta name="theme-color" content="#5a67d8">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #5a67d8;
+            --secondary-color: #7f9cf5;
+            --background-gradient: linear-gradient(135deg, #81e6d9 0%, #5a67d8 100%);
+            --text-dark: #2d3748;
+            --text-light: #718096;
+            --card-bg: white;
+            --border-color: #e2e8f0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background-gradient);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .header-info {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        #userInfo { display: flex; align-items: center; gap: 10px; font-size: 0.9em; color: #4b5563; }
+        #logoutBtn { font-size: 0.8em; padding: 5px 10px; background: #ef4444; color: white; border: none; border-radius: 5px; cursor: pointer; }
+
+        .sync-status { padding: 8px 15px; border-radius: 20px; font-size: 0.85em; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .sync-status.synced { background: #d1fae5; color: #065f46; }
+        .sync-status.syncing { background: #fef3c7; color: #92400e; }
+        .sync-status.error { background: #fee2e2; color: #991b1b; }
+        .sync-status::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+        h1 { color: var(--text-dark); text-align: center; margin-bottom: 20px; font-size: 2.2em; }
+
+        .login-section { text-align: center; padding: 20px; }
+        .login-section input { padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 6px; margin: 10px 5px; font-size: 1em; width: 250px; }
+        .login-section button { padding: 10px 25px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+
+        .tabs { display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); }
+        .tab { padding: 10px 15px; background: none; border: none; font-size: 0.9em; cursor: pointer; color: var(--text-light); transition: all 0.3s; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+        .tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 600; }
+
+        .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 15px; margin-bottom: 20px; background: #f7fafc; padding: 15px; border-radius: 12px; }
+        .controls select { font-size: 1em; padding: 11px; border: 1px solid var(--border-color); border-radius: 8px; flex-grow: 1; }
+        button { padding: 12px 20px; font-size: 1em; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
+
+        .start-btn { background: #48bb78; color: white; }
+        .stop-btn { background: #f56565; color: white; flex-grow: 1; }
+        
+        #sessionTimerCard { margin-bottom: 20px; background: #ebf8ff; border: 2px solid #90cdf4; padding: 15px; border-radius: 12px; text-align: center; }
+        #sessionTimerCard h3 { color: #2c5282; }
+        #sessionTimerCard .value { color: #2c5282; font-size: 2.5em; }
+
+        /* NEW: Progress Table Styles */
+        .progress-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .progress-table th, .progress-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .progress-table th { background-color: #f7fafc; color: var(--text-light); text-transform: uppercase; font-size: 0.8em; }
+        .progress-table td { color: var(--text-dark); }
+        .progress-table .category-badge { font-weight: bold; font-size: 1.1em; }
+        .progress-bar-container { width: 100%; background-color: #edf2f7; border-radius: 10px; height: 12px; overflow: hidden; }
+        .progress-bar { height: 100%; background-color: var(--secondary-color); border-radius: 10px; transition: width 0.5s ease-in-out; }
+        .progress-bar.complete { background-color: #68d391; }
+
+        .notes-section { background: #f7fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .notes-section textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; min-height: 60px; margin: 10px 0; }
+        .save-btn { background: #6b46c1; color: white; }
+        
+        .session-list { max-height: 400px; overflow-y: auto; }
+        .session-item { background: #fdfdff; border: 1px solid var(--border-color); padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        .session-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.8em; color: white; font-weight: bold; }
+
+        /* Placeholder Styles */
+        .placeholder { text-align: center; padding: 50px; color: var(--text-light); }
+        .placeholder h2 { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-info">
+            <div id="userInfo" style="display: none;">
+                <span id="userName"></span>
+                <button id="logoutBtn" onclick="logout()">Logout</button>
+            </div>
+            <div class="sync-status" id="syncStatus"><span id="syncText">Offline</span></div>
+        </div>
+
+        <h1>Category Time Tracker 📊</h1>
+        
+        <div class="login-section" id="loginSection">
+            <strong>Enter your name to sync:</strong><br>
+            <input type="text" id="userIdInput" placeholder="e.g., john.doe" maxlength="20">
+            <button onclick="login()">Start Tracking</button>
+        </div>
+
+        <div id="mainApp" style="display: none;">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('today')">Today</button>
+                <button class="tab" onclick="showTab('history')">History</button>
+                <button class="tab" onclick="showTab('expenses')">Expenses</button>
+                <button class="tab" onclick="showTab('goals')">Goals</button>
+                <button class="tab" onclick="showTab('settings')">Settings</button>
+            </div>
+
+            <div id="today-tab">
+                <div class="controls">
+                    <select id="categorySelect"></select>
+                    <button id="startSessionBtn" class="start-btn" onclick="startSession()">▶️ Start Session</button>
+                    <button id="stopSessionBtn" class="stop-btn" onclick="stopSession()" style="display: none;">⏹️ Stop Session</button>
+                </div>
+                
+                <div id="sessionTimerCard" style="display: none;">
+                    <h3 id="sessionTypeHeader"></h3>
+                    <div class="value" id="sessionTimer">00:00:00</div>
+                </div>
+
+                <div class="notes-section" id="notesSection" style="display: none;">
+                    <h3>What did you do during this <span id="notesSessionType" style="font-weight:bold;"></span> session?</h3>
+                    <textarea id="notes" placeholder="Enter details..."></textarea>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="save-btn" onclick="saveSession()">Save Session</button>
+                        <button class="stop-btn" onclick="cancelSession()">Cancel</button>
+                    </div>
+                </div>
+
+                <h3>Today's Progress</h3>
+                <table class="progress-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Target</th>
+                            <th>Actual</th>
+                            <th>Remaining</th>
+                            <th style="width: 25%;">Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody id="progressTableBody"></tbody>
+                </table>
+                
+                <h3>Today's Sessions Log</h3>
+                <div class="session-list" id="sessionList"></div>
+            </div>
+
+            <div id="history-tab" style="display: none;"><div class="session-list" id="historyList"></div></div>
+            <div id="expenses-tab" style="display: none;" class="placeholder"><h2>Expenses Tracker</h2><p>This feature is coming soon!</p></div>
+            <div id="goals-tab" style="display: none;" class="placeholder"><h2>Daily Goals</h2><p>This feature is coming soon!</p></div>
+            <div id="settings-tab" style="display: none;">
+                <div class="notes-section">
+                    <h3>Daily Category Targets (in hours)</h3>
+                    <p style="font-size: 0.9em; color: var(--text-light); margin-bottom: 15px;">Set your ideal time for each category per day. Set to 0 if you don't want to track a target.</p>
+                    <div id="categorySettings"></div>
+                    <button class="save-btn" onclick="saveSettings()" style="margin-top: 20px;">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+              apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
+  authDomain: "slot-tracker-c7ec1.firebaseapp.com",
+  databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
+  projectId: "slot-tracker-c7ec1",
+  storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
+  messagingSenderId: "639902490570",
+  appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
+        };
+        
+        // --- GLOBAL CONFIG & STATE ---
+        const CATEGORIES = {
+            'MZ': { name: 'Mizuho Work', color: '#e53e3e' },
+            'GC': { name: 'Grand Cholas', color: '#dd6b20' },
+            'AI': { name: 'AI Projects', color: '#3182ce' },
+            'Fly': { name: 'Family', color: '#38a169' },
+            'Brk': { name: 'Break', color: '#d69e2e' },
+            'Slp': { name: 'Sleep', color: '#805ad5' }
+        };
+
+        let app, db, userRef;
+        let userId = localStorage.getItem('trackerUserId_v2');
+        let isWorking = false;
+        let sessionStart = null;
+        let sessionType = null;
+        let updateTimer = null;
+
+        let data = {};
+
+        // --- INITIALIZATION ---
+        function init() {
+            try {
+                app = firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                if (userId) {
+                    document.getElementById('userIdInput').value = userId;
+                    login();
+                }
+            } catch (e) { console.error("Firebase init failed:", e); }
+            populateCategorySelect();
+        }
+
+        function login() {
+            userId = document.getElementById('userIdInput').value.trim().toLowerCase();
+            if (!userId) { alert('Please enter a name'); return; }
+            localStorage.setItem('trackerUserId_v2', userId);
+
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('userName').textContent = `User: ${userId}`;
+            document.getElementById('userInfo').style.display = 'flex';
+            
+            userRef = db.ref('categoryTracker/' + userId);
+            loadData();
+            setupSync();
+            checkAndRestoreSession();
+        }
+        
+        function logout() {
+            if (isWorking && !confirm('A session is running. Logging out will cancel it. Continue?')) return;
+            cancelSession(true);
+            localStorage.removeItem('trackerUserId_v2');
+            window.location.reload();
+        }
+
+        // --- DATA HANDLING ---
+        function getDefaultData() {
+            const defaultTargets = {};
+            Object.keys(CATEGORIES).forEach(key => defaultTargets[key] = 0);
+            // Pre-fill some common targets
+            defaultTargets['Slp'] = 8;
+            defaultTargets['MZ'] = 8;
+
+            return {
+                today: { date: new Date().toDateString(), sessions: [] },
+                history: [],
+                settings: { categoryTargets: defaultTargets }
+            };
+        }
+
+        function loadData() {
+            userRef.once('value').then(snapshot => {
+                const savedData = snapshot.val();
+                data = savedData || getDefaultData();
+                validateData();
+                if (data.today.date !== new Date().toDateString()) {
+                    archiveToday();
+                    saveToFirebase();
+                }
+                updateDisplay();
+                loadSettings();
+            });
+        }
+        
+        function setupSync() {
+            userRef.on('value', snapshot => {
+                const serverData = snapshot.val();
+                if (serverData) {
+                    data = serverData;
+                    validateData();
+                    if (data.today.date !== new Date().toDateString()) archiveToday();
+                    updateDisplay();
+                    updateSyncStatus('synced');
+                }
+            });
+        }
+
+        function saveToFirebase() {
+            if (!userRef) return;
+            validateData();
+            updateSyncStatus('syncing');
+            userRef.set(data).then(() => updateSyncStatus('synced')).catch(() => updateSyncStatus('error'));
+        }
+
+        function validateData() {
+            const defaultData = getDefaultData();
+            if (!data) data = defaultData;
+            if (!data.today) data.today = defaultData.today;
+            if (!data.today.sessions) data.today.sessions = [];
+            if (!data.history) data.history = [];
+            if (!data.settings || !data.settings.categoryTargets) {
+                data.settings = defaultData.settings;
+            }
+            // Ensure all categories exist in settings
+            Object.keys(CATEGORIES).forEach(key => {
+                if (data.settings.categoryTargets[key] === undefined) {
+                    data.settings.categoryTargets[key] = 0;
+                }
+            });
+        }
+        
+        function archiveToday() {
+            validateData();
+            if (data.today && data.today.sessions.length > 0) {
+                data.history.unshift({ ...data.today });
+            }
+            data.today = { date: new Date().toDateString(), sessions: [] };
+        }
+
+        // --- SESSION MANAGEMENT ---
+        function checkAndRestoreSession() {
+            const activeSession = JSON.parse(sessionStorage.getItem('activeSession_v2'));
+            if (activeSession && activeSession.isWorking) {
+                isWorking = true;
+                sessionStart = new Date(activeSession.sessionStart);
+                sessionType = activeSession.sessionType;
+                toggleControls(true);
+                updateTimer = setInterval(updateDisplay, 1000);
+            }
+        }
+        
+        function startSession() {
+            isWorking = true;
+            sessionStart = new Date();
+            sessionType = document.getElementById('categorySelect').value;
+
+            sessionStorage.setItem('activeSession_v2', JSON.stringify({ isWorking, sessionStart: sessionStart.getTime(), sessionType }));
+            toggleControls(true);
+            updateTimer = setInterval(updateDisplay, 1000);
+        }
+
+        function stopSession() {
+            if (!isWorking) return;
+            isWorking = false;
+            clearInterval(updateTimer);
+            updateTimer = null;
+            sessionStorage.removeItem('activeSession_v2');
+
+            document.getElementById('notesSessionType').textContent = CATEGORIES[sessionType].name;
+            document.getElementById('notesSection').style.display = 'block';
+            document.getElementById('notes').focus();
+        }
+
+        function saveSession() {
+            if (!sessionStart) return;
+            const duration = Math.round((new Date() - sessionStart) / 1000 / 60); // duration in minutes
+            if (duration < 1) {
+                alert("Session is less than a minute. Not saving.");
+                cancelSession(true);
+                return;
+            }
+            const session = {
+                type: sessionType,
+                start: sessionStart.toLocaleTimeString(),
+                end: new Date().toLocaleTimeString(),
+                duration: duration,
+                notes: document.getElementById('notes').value || 'No notes'
+            };
+            data.today.sessions.push(session);
+            
+            // Reset state
+            sessionStart = null;
+            sessionType = null;
+            document.getElementById('notes').value = '';
+            document.getElementById('notesSection').style.display = 'none';
+            toggleControls(false);
+            
+            saveToFirebase();
+            updateDisplay();
+        }
+
+        function cancelSession(isSilent = false) {
+            if (!isSilent && !confirm('Cancel this session? Time will not be recorded.')) return;
+            
+            isWorking = false;
+            clearInterval(updateTimer);
+            updateTimer = null;
+            sessionStorage.removeItem('activeSession_v2');
+            
+            sessionStart = null;
+            sessionType = null;
+            document.getElementById('notes').value = '';
+            document.getElementById('notesSection').style.display = 'none';
+            toggleControls(false);
+            updateDisplay();
+        }
+
+        // --- UI & DISPLAY ---
+        function updateDisplay() {
+            validateData();
+            // Update live timer if active
+            if (isWorking) {
+                const sessionDuration = (new Date() - sessionStart) / 1000;
+                const hours = Math.floor(sessionDuration / 3600);
+                const minutes = Math.floor((sessionDuration % 3600) / 60);
+                const seconds = Math.floor(sessionDuration % 60);
+                document.getElementById('sessionTimer').textContent = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+                document.getElementById('sessionTypeHeader').textContent = `Tracking: ${CATEGORIES[sessionType].name}`;
+                document.getElementById('sessionTimerCard').style.display = 'block';
+            } else {
+                document.getElementById('sessionTimerCard').style.display = 'none';
+            }
+            
+            // Calculate totals
+            const categoryTotals = {};
+            Object.keys(CATEGORIES).forEach(key => categoryTotals[key] = 0);
+            data.today.sessions.forEach(s => categoryTotals[s.type] += s.duration);
+            if(isWorking) {
+                const activeDuration = Math.round((new Date() - sessionStart) / 1000 / 60);
+                categoryTotals[sessionType] += activeDuration;
+            }
+
+            // Render Progress Table
+            const tableBody = document.getElementById('progressTableBody');
+            tableBody.innerHTML = '';
+            Object.keys(CATEGORIES).forEach(key => {
+                const targetMins = (data.settings.categoryTargets[key] || 0) * 60;
+                const actualMins = categoryTotals[key] || 0;
+                const remainingMins = Math.max(0, targetMins - actualMins);
+                const progress = targetMins > 0 ? Math.min(100, (actualMins / targetMins) * 100) : 0;
+                
+                const row = `
+                    <tr>
+                        <td><span class="category-badge" style="color: ${CATEGORIES[key].color};">${key}</span> ${CATEGORIES[key].name}</td>
+                        <td>${formatTime(targetMins)}</td>
+                        <td>${formatTime(actualMins)}</td>
+                        <td>${formatTime(remainingMins)}</td>
+                        <td>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar ${progress >= 100 ? 'complete' : ''}" style="width: ${progress}%; background-color: ${CATEGORIES[key].color};"></div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+
+            // Render Session Log
+            const sessionList = document.getElementById('sessionList');
+            sessionList.innerHTML = '';
+            data.today.sessions.slice().reverse().forEach(s => {
+                const div = document.createElement('div');
+                div.className = 'session-item';
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-weight: bold;">${s.start} - ${s.end}</span>
+                        <span class="session-badge" style="background-color: ${CATEGORIES[s.type].color};">${CATEGORIES[s.type].name}</span>
+                    </div>
+                    <strong>Duration:</strong> ${s.duration} mins<br>
+                    <strong>Notes:</strong> ${s.notes}
+                `;
+                sessionList.appendChild(div);
+            });
+            if (data.today.sessions.length === 0) {
+                 sessionList.innerHTML = '<p style="text-align:center; color: var(--text-light); padding: 20px;">No sessions logged for today yet.</p>';
+            }
+        }
+
+        function populateCategorySelect() {
+            const select = document.getElementById('categorySelect');
+            select.innerHTML = '';
+            Object.keys(CATEGORIES).forEach(key => {
+                select.innerHTML += `<option value="${key}">${CATEGORIES[key].name}</option>`;
+            });
+        }
+        
+        function showTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('#mainApp > div[id$="-tab"]').forEach(tab => tab.style.display = 'none');
+            document.getElementById(`${tabId}-tab`).style.display = 'block';
+            
+            if (tabId === 'history') showHistory();
+        }
+        
+        function showHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '<h3>Work History</h3>';
+            // Simple history display for now, can be enhanced later
+            if (!data.history || data.history.length === 0) {
+                list.innerHTML += '<p style="text-align:center; padding: 20px;">No past days recorded.</p>';
+                return;
+            }
+            data.history.forEach(day => {
+                let daySummary = `<div class="session-item"><strong>${new Date(day.date).toDateString()}</strong><br/>`;
+                const dailyTotals = {};
+                day.sessions.forEach(s => {
+                    dailyTotals[s.type] = (dailyTotals[s.type] || 0) + s.duration;
+                });
+                Object.keys(dailyTotals).forEach(key => {
+                     daySummary += `<span>${CATEGORIES[key].name}: ${formatTime(dailyTotals[key])}</span><br/>`;
+                });
+                daySummary += '</div>';
+                list.innerHTML += daySummary;
+            });
+        }
+        
+        // --- SETTINGS ---
+        function loadSettings() {
+            const container = document.getElementById('categorySettings');
+            container.innerHTML = '';
+            validateData(); // Ensure settings are present
+            Object.keys(CATEGORIES).forEach(key => {
+                const targetValue = data.settings.categoryTargets[key] || 0;
+                const settingHTML = `
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                        <label for="target-${key}" style="flex: 1; font-weight: bold; color:${CATEGORIES[key].color};">${CATEGORIES[key].name}</label>
+                        <input type="number" id="target-${key}" value="${targetValue}" min="0" max="24" step="0.5" style="width: 80px; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
+                    </div>`;
+                container.innerHTML += settingHTML;
+            });
+        }
+
+        function saveSettings() {
+            Object.keys(CATEGORIES).forEach(key => {
+                const value = document.getElementById(`target-${key}`).value;
+                data.settings.categoryTargets[key] = parseFloat(value) || 0;
+            });
+            saveToFirebase();
+            updateDisplay();
+            alert('Settings saved!');
+        }
+        
+        // --- UTILITIES ---
+        function toggleControls(sessionIsActive) {
+            document.getElementById('startSessionBtn').style.display = sessionIsActive ? 'none' : 'block';
+            document.getElementById('categorySelect').style.display = sessionIsActive ? 'none' : 'block';
+            document.getElementById('stopSessionBtn').style.display = sessionIsActive ? 'block' : 'none';
+        }
+
+        function formatTime(totalMinutes) {
+            if (totalMinutes < 1) return '0m';
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            return `${hours > 0 ? hours + 'h' : ''} ${minutes > 0 ? minutes + 'm' : ''}`.trim();
+        }
+
+        function updateSyncStatus(status) {
+            const el = document.getElementById('syncStatus');
+            el.className = 'sync-status ' + status;
+            document.getElementById('syncText').textContent = { synced: 'Synced', syncing: 'Syncing...', error: 'Error'}[status];
+        }
+
+        // --- RUN ---
+        init();
+    </script>
+</body>
+</html>
