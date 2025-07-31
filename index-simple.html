@@ -217,16 +217,6 @@
             margin-bottom: 10px;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-        
-        .session-timer-active {
-            animation: pulse 2s infinite;
-        }
-        
         .error-msg {
             background: #fee2e2;
             color: #991b1b;
@@ -290,12 +280,6 @@
                         <div class="value" id="todayDate" style="font-size: 1.2em;">-</div>
                     </div>
                 </div>
-                
-                <div class="status-card session-timer-active" id="sessionTimerCard" style="display: none; background: #dbeafe; border: 2px solid #3b82f6; margin-bottom: 20px;">
-                    <h3 style="color: #1e40af;">Current Session Time</h3>
-                    <div class="value" id="sessionTimer" style="color: #1e40af; font-size: 2.5em;">00:00:00</div>
-                    <div id="sessionMinutes" style="color: #3b82f6; font-size: 0.9em; margin-top: 5px;">0 minutes • 0 slots</div>
-                </div>
 
                 <div class="controls">
                     <button class="start-btn" id="startBtn" onclick="startWork()">Start Work</button>
@@ -307,10 +291,7 @@
                 <div class="notes-section" id="notesSection" style="display: none;">
                     <h3>What did you achieve?</h3>
                     <textarea id="notes" placeholder="Enter your accomplishments..."></textarea>
-                    <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button class="save-btn" onclick="saveSession()">Save Session</button>
-                        <button class="stop-btn" onclick="cancelSession()">Cancel Session</button>
-                    </div>
+                    <button class="save-btn" onclick="saveSession()">Save Session</button>
                 </div>
 
                 <h3>Today's Sessions</h3>
@@ -352,7 +333,7 @@
         // IMPORTANT: REPLACE ALL VALUES BELOW WITH YOUR FIREBASE CONFIG
         // Get these from Firebase Console > Project Settings > Your apps
         const firebaseConfig = {
-            apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
+             apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
   authDomain: "slot-tracker-c7ec1.firebaseapp.com",
   databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
   projectId: "slot-tracker-c7ec1",
@@ -361,27 +342,6 @@
   appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
         };
 
-        function cancelSession() {
-            if (confirm('Cancel this session? Time will not be recorded.')) {
-                // Reset everything without saving
-                isWorking = false;
-                sessionStart = null;
-                document.getElementById('notes').value = '';
-                document.getElementById('notesSection').style.display = 'none';
-                document.getElementById('sessionTimerCard').style.display = 'none';
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('stopBtn').disabled = true;
-                document.getElementById('currentStatus').textContent = 'Idle';
-                
-                if (updateInterval) {
-                    clearInterval(updateInterval);
-                    updateInterval = null;
-                }
-                
-                updateDisplay();
-            }
-        }
-        
         // Initialize Firebase
         let app, db, userRef;
         let userId = localStorage.getItem('trackerUserId');
@@ -576,9 +536,8 @@
                 if (!isWorking) return;
                 
                 isWorking = false;
-                if (updateInterval) {
-                    clearInterval(updateInterval);
-                    updateInterval = null;
+                if (updateTimer) {
+                    clearInterval(updateTimer);
                 }
                 
                 document.getElementById('notesSection').style.display = 'block';
@@ -622,19 +581,11 @@
                 
                 // Reset UI
                 sessionStart = null;
-                isWorking = false;
                 document.getElementById('notes').value = '';
                 document.getElementById('notesSection').style.display = 'none';
-                document.getElementById('sessionTimerCard').style.display = 'none'; // Hide timer
                 document.getElementById('startBtn').disabled = false;
                 document.getElementById('stopBtn').disabled = true;
                 document.getElementById('currentStatus').textContent = 'Idle';
-                
-                // Clear the interval
-                if (updateInterval) {
-                    clearInterval(updateInterval);
-                    updateInterval = null;
-                }
                 
                 saveToFirebase();
                 updateDisplay();
@@ -654,19 +605,6 @@
             
             if (isWorking && sessionStart) {
                 currentMinutes += Math.floor((new Date() - sessionStart) / 1000 / 60);
-                
-                // Update session timer
-                const sessionDuration = (new Date() - sessionStart) / 1000; // in seconds
-                const hours = Math.floor(sessionDuration / 3600);
-                const minutes = Math.floor((sessionDuration % 3600) / 60);
-                const seconds = Math.floor(sessionDuration % 60);
-                const totalMinutes = Math.floor(sessionDuration / 60);
-                const sessionSlots = Math.floor(totalMinutes / settings.slotDuration);
-                
-                document.getElementById('sessionTimer').textContent = 
-                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                document.getElementById('sessionMinutes').textContent = 
-                    `${totalMinutes} minute${totalMinutes !== 1 ? 's' : ''} • ${sessionSlots} slot${sessionSlots !== 1 ? 's' : ''}`;
             }
             
             const slots = Math.floor(currentMinutes / settings.slotDuration);
@@ -849,18 +787,6 @@
 
         function resetToday() {
             if (confirm('Reset today\'s data?')) {
-                // Stop any active session
-                if (isWorking) {
-                    isWorking = false;
-                    sessionStart = null;
-                    clearInterval(updateInterval);
-                    updateInterval = null;
-                    document.getElementById('sessionTimerCard').style.display = 'none';
-                    document.getElementById('startBtn').disabled = false;
-                    document.getElementById('stopBtn').disabled = true;
-                    document.getElementById('currentStatus').textContent = 'Idle';
-                }
-                
                 data.today = {
                     date: new Date().toDateString(),
                     sessions: [],
