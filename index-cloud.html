@@ -1197,6 +1197,12 @@ document.getElementById('breakBtn').disabled = true; // Keep disabled since sess
                 updateDisplay();
             }
         }, 60000);
+
+        window.addEventListener('load', () => {
+    initializeFirebase();
+    loadData(); // optionally call this if you want local fallback when offline
+});
+
     </script>
 </body>
 </html>
