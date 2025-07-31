@@ -33,6 +33,7 @@
             padding: 30px;
             max-width: 800px;
             margin: 0 auto;
+            position: relative;
         }
 
         .sync-status {
@@ -58,7 +59,7 @@
             color: #92400e;
         }
 
-        .sync-status.offline {
+        .sync-status.offline, .sync-status.error {
             background: #fee2e2;
             color: #991b1b;
         }
@@ -70,6 +71,17 @@
             border-radius: 50%;
             background: currentColor;
             display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        .sync-status.synced::before {
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
 
         h1 {
@@ -82,35 +94,36 @@
         .user-section {
             background: #f0f9ff;
             border: 2px solid #0284c7;
-            padding: 15px;
+            padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
             text-align: center;
         }
 
         .user-section input {
-            padding: 8px 12px;
+            padding: 10px 15px;
             border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            margin: 0 10px;
+            border-radius: 6px;
+            margin: 10px 5px;
             font-size: 1em;
+            width: 250px;
         }
 
         .user-section button {
-            padding: 8px 20px;
+            padding: 10px 25px;
             background: #0284c7;
             color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
+            margin: 5px;
         }
 
         .user-section button:hover {
             background: #0369a1;
         }
 
-        /* Copy all other styles from the original tracker */
         .tabs {
             display: flex;
             gap: 10px;
@@ -223,14 +236,26 @@
             color: white;
         }
 
+        .start-btn:hover {
+            background: #22c55e;
+        }
+
         .stop-btn {
             background: #f87171;
             color: white;
         }
 
+        .stop-btn:hover {
+            background: #ef4444;
+        }
+
         .break-btn {
             background: #fbbf24;
             color: white;
+        }
+
+        .break-btn:hover {
+            background: #f59e0b;
         }
 
         button:disabled {
@@ -250,13 +275,103 @@
             display: block;
         }
 
+        .session-notes h3 {
+            color: #334155;
+            margin-bottom: 10px;
+        }
+
         .session-notes textarea {
             width: 100%;
             padding: 10px;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
+            font-family: inherit;
             resize: vertical;
             min-height: 80px;
+        }
+
+        .save-note-btn {
+            background: #8b5cf6;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .save-note-btn:hover {
+            background: #7c3aed;
+        }
+
+        .settings {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .settings h3 {
+            color: #334155;
+            margin-bottom: 15px;
+        }
+
+        .settings-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .settings label {
+            color: #64748b;
+            font-size: 0.9em;
+        }
+
+        .settings input {
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .history-item h4 {
+            color: #334155;
+            margin-bottom: 5px;
+        }
+
+        .history-item p {
+            color: #64748b;
+            font-size: 0.9em;
+            margin: 3px 0;
+        }
+
+        .history-item .notes {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-style: italic;
+            color: #475569;
+        }
+
+        .export-btn {
+            background: #06b6d4;
+            color: white;
+        }
+
+        .export-btn:hover {
+            background: #0891b2;
         }
 
         .progress-bar {
@@ -277,56 +392,37 @@
             justify-content: center;
             color: white;
             font-weight: bold;
+            font-size: 0.9em;
         }
 
-        .settings {
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        .error-message {
+            color: #dc2626;
+            font-size: 0.9em;
+            margin-top: 10px;
+            display: none;
         }
 
-        .settings-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .history-item {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-
-        .history-item .notes {
-            background: white;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 8px;
-            font-style: italic;
-            color: #475569;
+        .error-message.show {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div class="sync-status" id="syncStatus">
-        <span id="syncText">Offline</span>
-    </div>
-
     <div class="container">
+        <div class="sync-status" id="syncStatus">
+            <span id="syncText">Offline</span>
+        </div>
+
         <h1>Slot Tracker - Cloud Sync</h1>
         
         <div class="user-section" id="userSection">
-            <strong>Enter a unique ID to sync across devices:</strong>
+            <strong>Enter a unique ID to sync across devices:</strong><br>
             <input type="text" id="userId" placeholder="e.g., john-smith-2024" pattern="[a-z0-9-]+" maxlength="50">
             <button onclick="setUserId()">Start Syncing</button>
             <p style="margin-top: 10px; font-size: 0.85em; color: #64748b;">
                 Use the same ID on all your devices to sync data automatically
             </p>
+            <p class="error-message" id="errorMessage"></p>
         </div>
 
         <div id="mainContent" style="display: none;">
@@ -336,52 +432,189 @@
                 <button class="tab" onclick="switchTab('settings')">Settings</button>
             </div>
 
-            <!-- Copy all tab content from original tracker -->
+            <!-- Today Tab -->
             <div id="today-tab" class="tab-content active">
-                <!-- All today tab content -->
+                <div class="warning" id="warning"></div>
+
+                <div class="status-grid">
+                    <div class="status-card primary">
+                        <h3>Slots Used</h3>
+                        <div class="value" id="slotsUsed">0</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Remaining</h3>
+                        <div class="value" id="slotsRemaining">150</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Work Time</h3>
+                        <div class="value" id="timeWorked">0:00</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Break Time</h3>
+                        <div class="value" id="breakTime">0:00</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Current</h3>
+                        <div class="value" id="currentStatus">Idle</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Max Possible</h3>
+                        <div class="value" id="maxPossible">150</div>
+                    </div>
+                </div>
+
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
+                </div>
+
+                <div class="controls">
+                    <button class="start-btn" id="startBtn" onclick="startWork()">Start Work</button>
+                    <button class="stop-btn" id="stopBtn" onclick="stopWork()" disabled>Stop Work</button>
+                    <button class="break-btn" id="breakBtn" onclick="toggleBreak()" disabled>Take Break</button>
+                    <button class="export-btn" onclick="exportToday()">Export Today</button>
+                    <button onclick="resetToday()">Reset Today</button>
+                </div>
+
+                <div class="session-notes" id="sessionNotes">
+                    <h3>Session Notes (What did you achieve?)</h3>
+                    <textarea id="notesInput" placeholder="Enter what you accomplished in this session..."></textarea>
+                    <button class="save-note-btn" onclick="saveSessionNote()">Save & End Session</button>
+                </div>
+
+                <div class="history-list">
+                    <h3 style="margin-bottom: 15px;">Today's Sessions</h3>
+                    <div id="todaySessions"></div>
+                </div>
             </div>
 
+            <!-- History Tab -->
             <div id="history-tab" class="tab-content">
-                <!-- All history tab content -->
+                <div class="controls" style="margin-bottom: 20px;">
+                    <button class="export-btn" onclick="exportAll()">Export All Data</button>
+                    <button class="export-btn" onclick="exportWeek()">Export This Week</button>
+                    <button class="export-btn" onclick="exportMonth()">Export This Month</button>
+                </div>
+                
+                <div class="history-list">
+                    <h3 style="margin-bottom: 15px;">Historical Data</h3>
+                    <div id="historyList"></div>
+                </div>
             </div>
 
+            <!-- Settings Tab -->
             <div id="settings-tab" class="tab-content">
-                <!-- All settings tab content -->
+                <div class="settings">
+                    <h3>Work Hours Configuration</h3>
+                    <div class="settings-row">
+                        <div>
+                            <label>Start Time</label>
+                            <input type="time" id="workStart" value="06:30">
+                        </div>
+                        <div>
+                            <label>End Time</label>
+                            <input type="time" id="workEnd" value="22:00">
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div>
+                            <label>Target Slots</label>
+                            <input type="number" id="targetSlots" value="150" min="1" max="300">
+                        </div>
+                        <div>
+                            <label>Slot Duration (minutes)</label>
+                            <input type="number" id="slotDuration" value="5" min="1" max="60">
+                        </div>
+                    </div>
+                    <button class="save-note-btn" onclick="saveSettings()">Save Settings</button>
+                </div>
+
+                <div class="settings" style="margin-top: 20px;">
+                    <h3>Sync Settings</h3>
+                    <p>User ID: <strong id="currentUserId"></strong></p>
+                    <button class="export-btn" onclick="changeUserId()">Change User ID</button>
+                    <button class="stop-btn" onclick="clearAllData()">Clear All Data</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Firebase configuration - REPLACE WITH YOUR OWN CONFIG
+        // Firebase configuration - REPLACE WITH YOUR CONFIG
         const firebaseConfig = {
-            // You'll get these values from Firebase Console
              apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
-             authDomain: "slot-tracker-c7ec1.firebaseapp.com",
-             databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
-             projectId: "slot-tracker-c7ec1",
-             storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
-             messagingSenderId: "639902490570",
-             appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
+  authDomain: "slot-tracker-c7ec1.firebaseapp.com",
+  databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
+  projectId: "slot-tracker-c7ec1",
+  storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
+  messagingSenderId: "639902490570",
+  appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
+        };
+
+        // Initialize variables
+        let app, database, userRef;
+        let currentUserId = localStorage.getItem('slotTrackerUserId');
+        let syncListener = null;
+        let lastSyncTime = null;
+        
+        // State variables
+        let isWorking = false;
+        let onBreak = false;
+        let sessionStartTime = null;
+        let breakStartTime = null;
+        let currentSession = null;
+        let updateInterval = null;
+
+        // Default data structure
+        let memoryStorage = {
+            settings: {
+                workStart: '06:30',
+                workEnd: '22:00',
+                targetSlots: 150,
+                slotDuration: 5
+            },
+            todayData: {
+                date: new Date().toDateString(),
+                sessions: [],
+                totalWorkTime: 0,
+                totalBreakTime: 0,
+                slotsCompleted: 0
+            },
+            history: []
         };
 
         // Initialize Firebase
-        let app, database, userRef;
-        let currentUserId = localStorage.getItem('slotTrackerUserId');
-        
-        // Initialize Firebase when user ID is set
         function initializeFirebase() {
-            if (!app) {
-                app = firebase.initializeApp(firebaseConfig);
-                database = firebase.database();
+            try {
+                if (!app) {
+                    app = firebase.initializeApp(firebaseConfig);
+                    database = firebase.database();
+                }
+                
+                if (currentUserId) {
+                    userRef = database.ref('users/' + currentUserId);
+                    setupRealtimeSync();
+                    document.getElementById('userSection').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    document.getElementById('currentUserId').textContent = currentUserId;
+                    updateSyncStatus('syncing');
+                    
+                    // Initial data load
+                    loadFromFirebase();
+                }
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                showError('Failed to initialize sync. Check your internet connection.');
+                updateSyncStatus('error');
             }
-            
-            if (currentUserId) {
-                userRef = database.ref('users/' + currentUserId);
-                setupRealtimeSync();
-                document.getElementById('userSection').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                updateSyncStatus('syncing');
-            }
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            setTimeout(() => {
+                errorEl.classList.remove('show');
+            }, 5000);
         }
 
         function setUserId() {
@@ -389,7 +622,7 @@
             const userId = input.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
             
             if (userId.length < 3) {
-                alert('Please enter at least 3 characters for your ID');
+                showError('Please enter at least 3 characters for your ID');
                 return;
             }
             
@@ -398,22 +631,73 @@
             initializeFirebase();
         }
 
+        function changeUserId() {
+            if (confirm('Changing user ID will switch to a different data set. Continue?')) {
+                localStorage.removeItem('slotTrackerUserId');
+                location.reload();
+            }
+        }
+
         function setupRealtimeSync() {
-            // Listen for changes from other devices
-            userRef.on('value', (snapshot) => {
+            if (syncListener) {
+                userRef.off('value', syncListener);
+            }
+            
+            syncListener = userRef.on('value', (snapshot) => {
                 const data = snapshot.val();
-                if (data && data.lastUpdated !== localStorage.getItem('lastSyncTime')) {
+                if (data && data.lastUpdated !== lastSyncTime) {
+                    console.log('Received update from Firebase');
                     memoryStorage = data.data || memoryStorage;
-                    localStorage.setItem('lastSyncTime', data.lastUpdated);
+                    lastSyncTime = data.lastUpdated;
+                    
+                    // Update UI
+                    applySettings();
                     updateDisplay();
                     displayTodaySessions();
                     updateSyncStatus('synced');
+                } else if (!data) {
+                    // First time user - save initial data
+                    syncToCloud();
                 }
+            }, (error) => {
+                console.error('Firebase sync error:', error);
+                updateSyncStatus('error');
+                showError('Sync error: ' + error.message);
+            });
+        }
+
+        function loadFromFirebase() {
+            if (!userRef) return;
+            
+            userRef.once('value').then((snapshot) => {
+                const data = snapshot.val();
+                if (data && data.data) {
+                    memoryStorage = data.data;
+                    lastSyncTime = data.lastUpdated;
+                    
+                    // Check if today's data is actually from today
+                    if (memoryStorage.todayData.date !== new Date().toDateString()) {
+                        archiveTodayData();
+                    }
+                    
+                    applySettings();
+                    updateDisplay();
+                    displayTodaySessions();
+                    updateSyncStatus('synced');
+                } else {
+                    // No existing data - save initial
+                    syncToCloud();
+                }
+            }).catch((error) => {
+                console.error('Load error:', error);
+                updateSyncStatus('error');
             });
         }
 
         function syncToCloud() {
             if (!userRef) return;
+            
+            updateSyncStatus('syncing');
             
             const syncData = {
                 data: memoryStorage,
@@ -422,11 +706,13 @@
             };
             
             userRef.set(syncData).then(() => {
-                localStorage.setItem('lastSyncTime', syncData.lastUpdated);
+                lastSyncTime = syncData.lastUpdated;
                 updateSyncStatus('synced');
+                console.log('Data synced successfully');
             }).catch((error) => {
                 console.error('Sync error:', error);
-                updateSyncStatus('offline');
+                updateSyncStatus('error');
+                showError('Failed to sync: ' + error.message);
             });
         }
 
@@ -446,24 +732,433 @@
                 case 'offline':
                     textEl.textContent = 'Offline';
                     break;
+                case 'error':
+                    textEl.textContent = 'Sync Error';
+                    break;
             }
         }
 
-        // Override the original saveData function to include cloud sync
-        const originalSaveData = saveData;
-        function saveData() {
-            originalSaveData();
-            syncToCloud();
+        // Archive today's data if it's from a previous day
+        function archiveTodayData() {
+            if (memoryStorage.todayData.sessions.length > 0) {
+                memoryStorage.history.unshift({
+                    ...memoryStorage.todayData,
+                    archived: true
+                });
+            }
+            
+            memoryStorage.todayData = {
+                date: new Date().toDateString(),
+                sessions: [],
+                totalWorkTime: 0,
+                totalBreakTime: 0,
+                slotsCompleted: 0
+            };
         }
 
-        // Check for existing user ID on load
+        // Storage functions
+        function loadData() {
+            // For Firebase version, data is loaded from cloud
+            if (!currentUserId) {
+                // Load from localStorage if no user ID
+                const savedData = localStorage.getItem('slotTrackerData');
+                if (savedData) {
+                    memoryStorage = JSON.parse(savedData);
+                }
+            }
+            
+            // Check if today's data is actually from today
+            if (memoryStorage.todayData.date !== new Date().toDateString()) {
+                archiveTodayData();
+                saveData();
+            }
+            
+            applySettings();
+        }
+
+        function saveData() {
+            // Save to localStorage as backup
+            localStorage.setItem('slotTrackerData', JSON.stringify(memoryStorage));
+            
+            // Sync to cloud if connected
+            if (userRef) {
+                syncToCloud();
+            }
+        }
+
+        function applySettings() {
+            const settings = memoryStorage.settings;
+            document.getElementById('workStart').value = settings.workStart;
+            document.getElementById('workEnd').value = settings.workEnd;
+            document.getElementById('targetSlots').value = settings.targetSlots;
+            document.getElementById('slotDuration').value = settings.slotDuration;
+        }
+
+        function saveSettings() {
+            memoryStorage.settings = {
+                workStart: document.getElementById('workStart').value,
+                workEnd: document.getElementById('workEnd').value,
+                targetSlots: parseInt(document.getElementById('targetSlots').value),
+                slotDuration: parseInt(document.getElementById('slotDuration').value)
+            };
+            saveData();
+            updateDisplay();
+            alert('Settings saved successfully!');
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+
+            if (tabName === 'history') {
+                loadHistory();
+            }
+        }
+
+        function startWork() {
+            isWorking = true;
+            onBreak = false;
+            sessionStartTime = new Date();
+            currentSession = {
+                start: sessionStartTime.toISOString(),
+                type: 'work',
+                notes: ''
+            };
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('breakBtn').disabled = false;
+            document.getElementById('breakBtn').textContent = 'Take Break';
+            document.getElementById('currentStatus').textContent = 'Working';
+            
+            updateInterval = setInterval(updateDisplay, 1000);
+        }
+
+        function stopWork() {
+            if (currentSession) {
+                document.getElementById('sessionNotes').classList.add('show');
+                document.getElementById('notesInput').focus();
+            }
+        }
+
+        function saveSessionNote() {
+            if (currentSession) {
+                currentSession.end = new Date().toISOString();
+                currentSession.notes = document.getElementById('notesInput').value;
+                currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
+                
+                memoryStorage.todayData.sessions.push(currentSession);
+                
+                if (currentSession.type === 'work') {
+                    memoryStorage.todayData.totalWorkTime += currentSession.duration;
+                    memoryStorage.todayData.slotsCompleted = Math.floor(
+                        memoryStorage.todayData.totalWorkTime / memoryStorage.settings.slotDuration
+                    );
+                } else {
+                    memoryStorage.todayData.totalBreakTime += currentSession.duration;
+                }
+                
+                saveData();
+                currentSession = null;
+                document.getElementById('notesInput').value = '';
+                document.getElementById('sessionNotes').classList.remove('show');
+            }
+
+            isWorking = false;
+            onBreak = false;
+            sessionStartTime = null;
+            breakStartTime = null;
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('breakBtn').disabled = true;
+            document.getElementById('currentStatus').textContent = 'Idle';
+            
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+            
+            updateDisplay();
+            displayTodaySessions();
+        }
+
+        function toggleBreak() {
+            if (onBreak) {
+                breakStartTime = null;
+                onBreak = false;
+                document.getElementById('breakBtn').textContent = 'Take Break';
+                document.getElementById('currentStatus').textContent = 'Working';
+                
+                if (currentSession && currentSession.type === 'break') {
+                    currentSession.end = new Date().toISOString();
+                    currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
+                    memoryStorage.todayData.sessions.push(currentSession);
+                    memoryStorage.todayData.totalBreakTime += currentSession.duration;
+                    saveData();
+                }
+                
+                currentSession = {
+                    start: new Date().toISOString(),
+                    type: 'work',
+                    notes: ''
+                };
+            } else {
+                breakStartTime = new Date();
+                onBreak = true;
+                document.getElementById('breakBtn').textContent = 'Resume Work';
+                document.getElementById('currentStatus').textContent = 'On Break';
+                
+                if (currentSession && currentSession.type === 'work') {
+                    currentSession.end = new Date().toISOString();
+                    currentSession.duration = (new Date(currentSession.end) - new Date(currentSession.start)) / 1000 / 60;
+                    currentSession.notes = 'Auto-saved before break';
+                    memoryStorage.todayData.sessions.push(currentSession);
+                    memoryStorage.todayData.totalWorkTime += currentSession.duration;
+                    saveData();
+                }
+                
+                currentSession = {
+                    start: new Date().toISOString(),
+                    type: 'break',
+                    notes: 'Break'
+                };
+            }
+            
+            updateDisplay();
+            displayTodaySessions();
+        }
+
+        function updateDisplay() {
+            const now = new Date();
+            const settings = memoryStorage.settings;
+            
+            let currentWorkTime = memoryStorage.todayData.totalWorkTime;
+            if (isWorking && !onBreak && sessionStartTime) {
+                currentWorkTime += (now - sessionStartTime) / 1000 / 60;
+            }
+            
+            const slotsUsed = Math.floor(currentWorkTime / settings.slotDuration);
+            document.getElementById('slotsUsed').textContent = slotsUsed;
+            document.getElementById('slotsRemaining').textContent = settings.targetSlots - slotsUsed;
+            
+            const workHours = Math.floor(currentWorkTime / 60);
+            const workMinutes = Math.floor(currentWorkTime % 60);
+            document.getElementById('timeWorked').textContent = `${workHours}:${workMinutes.toString().padStart(2, '0')}`;
+            
+            let currentBreakTime = memoryStorage.todayData.totalBreakTime;
+            if (onBreak && breakStartTime) {
+                currentBreakTime += (now - breakStartTime) / 1000 / 60;
+            }
+            
+            const breakHours = Math.floor(currentBreakTime / 60);
+            const breakMinutes = Math.floor(currentBreakTime % 60);
+            document.getElementById('breakTime').textContent = `${breakHours}:${breakMinutes.toString().padStart(2, '0')}`;
+            
+            const [endHour, endMinute] = settings.workEnd.split(':').map(Number);
+            const endTime = new Date();
+            endTime.setHours(endHour, endMinute, 0);
+            
+            const remainingMs = Math.max(0, endTime - now);
+            const remainingMinutes = remainingMs / 1000 / 60;
+            const maxPossibleSlots = slotsUsed + Math.floor(remainingMinutes / settings.slotDuration);
+            document.getElementById('maxPossible').textContent = Math.min(maxPossibleSlots, 300);
+            
+            const progress = Math.min(100, (slotsUsed / settings.targetSlots) * 100);
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+            
+            const warningEl = document.getElementById('warning');
+            if (maxPossibleSlots < settings.targetSlots && slotsUsed < settings.targetSlots) {
+                warningEl.textContent = `⚠️ Warning: You can only complete ${maxPossibleSlots} slots today. You need ${settings.targetSlots - slotsUsed} more slots but only have time for ${maxPossibleSlots - slotsUsed}.`;
+                warningEl.classList.add('show');
+            } else {
+                warningEl.classList.remove('show');
+            }
+        }
+
+        function displayTodaySessions() {
+            const container = document.getElementById('todaySessions');
+            container.innerHTML = '';
+            
+            const sessions = [...memoryStorage.todayData.sessions].reverse();
+            sessions.forEach((session, index) => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                
+                const start = new Date(session.start);
+                const end = session.end ? new Date(session.end) : new Date();
+                const duration = Math.round(session.duration || ((end - start) / 1000 / 60));
+                
+                item.innerHTML = `
+                    <h4>Session ${sessions.length - index} - ${session.type === 'work' ? 'Work' : 'Break'}</h4>
+                    <p>Time: ${start.toLocaleTimeString()} - ${session.end ? end.toLocaleTimeString() : 'Ongoing'}</p>
+                    <p>Duration: ${duration} minutes (${Math.floor(duration / memoryStorage.settings.slotDuration)} slots)</p>
+                    ${session.notes ? `<div class="notes">${session.notes}</div>` : ''}
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        function loadHistory() {
+            const container = document.getElementById('historyList');
+            container.innerHTML = '';
+            
+            const allDays = [...memoryStorage.history];
+            if (memoryStorage.todayData.sessions.length > 0) {
+                allDays.unshift(memoryStorage.todayData);
+            }
+            
+            allDays.forEach(day => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                
+                const date = new Date(day.date);
+                const completion = Math.round((day.slotsCompleted / memoryStorage.settings.targetSlots) * 100);
+                
+                item.innerHTML = `
+                    <h4>${date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h4>
+                    <p>Slots Completed: ${day.slotsCompleted} / ${memoryStorage.settings.targetSlots} (${completion}%)</p>
+                    <p>Work Time: ${Math.floor(day.totalWorkTime / 60)}h ${Math.floor(day.totalWorkTime % 60)}m</p>
+                    <p>Break Time: ${Math.floor(day.totalBreakTime / 60)}h ${Math.floor(day.totalBreakTime % 60)}m</p>
+                    <p>Sessions: ${day.sessions.filter(s => s.type === 'work').length} work, ${day.sessions.filter(s => s.type === 'break').length} breaks</p>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+
+        function exportToCSV(data, filename) {
+            let csv = 'Date,Session Type,Start Time,End Time,Duration (min),Slots,Notes\n';
+            
+            data.forEach(day => {
+                day.sessions.forEach(session => {
+                    const start = new Date(session.start);
+                    const end = session.end ? new Date(session.end) : new Date();
+                    const slots = Math.floor((session.duration || 0) / memoryStorage.settings.slotDuration);
+                    
+                    csv += `${day.date},${session.type},${start.toLocaleTimeString()},${end.toLocaleTimeString()},${Math.round(session.duration || 0)},${slots},"${session.notes || ''}"\n`;
+                });
+            });
+            
+            csv += '\n\nSummary\n';
+            csv += 'Date,Total Slots,Work Time (min),Break Time (min),Completion %\n';
+            
+            data.forEach(day => {
+                const completion = Math.round((day.slotsCompleted / memoryStorage.settings.targetSlots) * 100);
+                csv += `${day.date},${day.slotsCompleted},${Math.round(day.totalWorkTime)},${Math.round(day.totalBreakTime)},${completion}%\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function exportToday() {
+            exportToCSV([memoryStorage.todayData], `slot_tracker_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function exportWeek() {
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            
+            const weekData = memoryStorage.history.filter(day => 
+                new Date(day.date) >= weekAgo
+            );
+            
+            if (memoryStorage.todayData.sessions.length > 0) {
+                weekData.push(memoryStorage.todayData);
+            }
+            
+            exportToCSV(weekData, `slot_tracker_week_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function exportMonth() {
+            const monthAgo = new Date();
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            
+            const monthData = memoryStorage.history.filter(day => 
+                new Date(day.date) >= monthAgo
+            );
+            
+            if (memoryStorage.todayData.sessions.length > 0) {
+                monthData.push(memoryStorage.todayData);
+            }
+            
+            exportToCSV(monthData, `slot_tracker_month_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function exportAll() {
+            const allData = [...memoryStorage.history];
+            if (memoryStorage.todayData.sessions.length > 0) {
+                allData.push(memoryStorage.todayData);
+            }
+            
+            exportToCSV(allData, `slot_tracker_all_data_${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data? This cannot be undone!')) {
+                memoryStorage = {
+                    settings: memoryStorage.settings,
+                    todayData: {
+                        date: new Date().toDateString(),
+                        sessions: [],
+                        totalWorkTime: 0,
+                        totalBreakTime: 0,
+                        slotsCompleted: 0
+                    },
+                    history: []
+                };
+                saveData();
+                updateDisplay();
+                displayTodaySessions();
+                alert('All data cleared successfully!');
+            }
+        }
+
+        function resetToday() {
+            if (confirm('Are you sure you want to reset today\'s data?')) {
+                memoryStorage.todayData = {
+                    date: new Date().toDateString(),
+                    sessions: [],
+                    totalWorkTime: 0,
+                    totalBreakTime: 0,
+                    slotsCompleted: 0
+                };
+                saveData();
+                updateDisplay();
+                displayTodaySessions();
+            }
+        }
+
+        // Initialize
         if (currentUserId) {
             document.getElementById('userId').value = currentUserId;
             initializeFirebase();
+        } else {
+            loadData();
+            updateDisplay();
         }
-
-        // Add all the original tracker functions here...
-        // (Copy all JavaScript from the original tracker)
+        
+        // Update display every minute when idle
+        setInterval(() => {
+            if (!isWorking) {
+                updateDisplay();
+            }
+        }, 60000);
     </script>
 </body>
 </html>
