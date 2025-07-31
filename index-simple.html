@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Tracker - Cloud Sync</title>
+    <meta name="theme-color" content="#667eea">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .sync-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sync-status.synced { background: #d1fae5; color: #065f46; }
+        .sync-status.syncing { background: #fef3c7; color: #92400e; }
+        .sync-status.error { background: #fee2e2; color: #991b1b; }
+
+        .sync-status::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.2em;
+        }
+
+        .login-section {
+            background: #f0f9ff;
+            border: 2px solid #0284c7;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .login-section input {
+            padding: 10px 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            margin: 10px 5px;
+            font-size: 1em;
+            width: 250px;
+        }
+
+        .login-section button {
+            padding: 10px 25px;
+            background: #0284c7;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            font-size: 1em;
+            cursor: pointer;
+            color: #64748b;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .status-card h3 {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .status-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status-card.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .status-card.primary h3 {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .status-card.primary .value {
+            color: white;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .start-btn { background: #4ade80; color: white; }
+        .stop-btn { background: #f87171; color: white; }
+        .break-btn { background: #fbbf24; color: white; }
+        .export-btn { background: #06b6d4; color: white; }
+        .save-btn { background: #8b5cf6; color: white; }
+
+        .notes-section {
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .notes-section textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            resize: vertical;
+            min-height: 60px;
+            margin: 10px 0;
+        }
+
+        .session-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .session-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .error-msg {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .error-msg.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sync-status" id="syncStatus">
+            <span id="syncText">Offline</span>
+        </div>
+
+        <h1>Slot Tracker</h1>
+        
+        <div class="login-section" id="loginSection">
+            <strong>Enter your name to sync across devices:</strong><br>
+            <input type="text" id="userId" placeholder="e.g., john" maxlength="20">
+            <button onclick="login()">Start</button>
+        </div>
+
+        <div id="mainApp" style="display: none;">
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('today')">Today</button>
+                <button class="tab" onclick="showTab('history')">History</button>
+            </div>
+
+            <div id="today-tab">
+                <div class="error-msg" id="errorMsg"></div>
+
+                <div class="status-grid">
+                    <div class="status-card primary">
+                        <h3>Slots Used</h3>
+                        <div class="value" id="slotsUsed">0</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Remaining</h3>
+                        <div class="value" id="slotsRemaining">150</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Work Time</h3>
+                        <div class="value" id="workTime">0:00</div>
+                    </div>
+                    <div class="status-card">
+                        <h3>Status</h3>
+                        <div class="value" id="currentStatus">Idle</div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="start-btn" id="startBtn" onclick="startWork()">Start Work</button>
+                    <button class="stop-btn" id="stopBtn" onclick="stopWork()" disabled>Stop Work</button>
+                    <button class="export-btn" onclick="exportData()">Export CSV</button>
+                    <button onclick="resetToday()">Reset Today</button>
+                </div>
+
+                <div class="notes-section" id="notesSection" style="display: none;">
+                    <h3>What did you achieve?</h3>
+                    <textarea id="notes" placeholder="Enter your accomplishments..."></textarea>
+                    <button class="save-btn" onclick="saveSession()">Save Session</button>
+                </div>
+
+                <h3>Today's Sessions</h3>
+                <div class="session-list" id="sessionList"></div>
+            </div>
+
+            <div id="history-tab" style="display: none;">
+                <div class="session-list" id="historyList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE WITH YOUR FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
+  authDomain: "slot-tracker-c7ec1.firebaseapp.com",
+  databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
+  projectId: "slot-tracker-c7ec1",
+  storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
+  messagingSenderId: "639902490570",
+  appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
+        };
+
+        // Initialize Firebase
+        let app, db, userRef;
+        let userId = localStorage.getItem('trackerUserId');
+        let isWorking = false;
+        let sessionStart = null;
+        let updateTimer = null;
+
+        // Data structure
+        let data = {
+            today: {
+                date: new Date().toDateString(),
+                sessions: [],
+                totalMinutes: 0
+            },
+            history: []
+        };
+
+        // Initialize app
+        function init() {
+            try {
+                app = firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                
+                if (userId) {
+                    document.getElementById('userId').value = userId;
+                    login();
+                }
+            } catch (error) {
+                showError('Firebase init error: ' + error.message);
+            }
+        }
+
+        function login() {
+            userId = document.getElementById('userId').value.trim().toLowerCase();
+            if (!userId) {
+                alert('Please enter a name');
+                return;
+            }
+            
+            localStorage.setItem('trackerUserId', userId);
+            userRef = db.ref('tracker/' + userId);
+            
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            
+            loadData();
+            setupSync();
+        }
+
+        function setupSync() {
+            userRef.on('value', (snapshot) => {
+                const serverData = snapshot.val();
+                if (serverData) {
+                    data = serverData;
+                    
+                    // Check if today's data is old
+                    if (data.today.date !== new Date().toDateString()) {
+                        archiveToday();
+                    }
+                    
+                    updateDisplay();
+                    updateSyncStatus('synced');
+                }
+            }, (error) => {
+                showError('Sync error: ' + error.message);
+                updateSyncStatus('error');
+            });
+        }
+
+        function saveToFirebase() {
+            if (!userRef) return;
+            
+            updateSyncStatus('syncing');
+            userRef.set(data).then(() => {
+                updateSyncStatus('synced');
+            }).catch((error) => {
+                showError('Save error: ' + error.message);
+                updateSyncStatus('error');
+            });
+        }
+
+        function archiveToday() {
+            if (data.today.sessions.length > 0) {
+                data.history.unshift({...data.today});
+            }
+            data.today = {
+                date: new Date().toDateString(),
+                sessions: [],
+                totalMinutes: 0
+            };
+        }
+
+        function startWork() {
+            isWorking = true;
+            sessionStart = new Date();
+            
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('currentStatus').textContent = 'Working';
+            
+            updateTimer = setInterval(updateDisplay, 1000);
+        }
+
+        function stopWork() {
+            if (!isWorking) return;
+            
+            isWorking = false;
+            clearInterval(updateTimer);
+            
+            document.getElementById('notesSection').style.display = 'block';
+            document.getElementById('notes').focus();
+        }
+
+        function saveSession() {
+            if (!sessionStart) return;
+            
+            const duration = Math.floor((new Date() - sessionStart) / 1000 / 60);
+            const session = {
+                start: sessionStart.toLocaleTimeString(),
+                end: new Date().toLocaleTimeString(),
+                duration: duration,
+                notes: document.getElementById('notes').value || 'No notes'
+            };
+            
+            data.today.sessions.push(session);
+            data.today.totalMinutes += duration;
+            
+            // Reset UI
+            sessionStart = null;
+            document.getElementById('notes').value = '';
+            document.getElementById('notesSection').style.display = 'none';
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('currentStatus').textContent = 'Idle';
+            
+            saveToFirebase();
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            let currentMinutes = data.today.totalMinutes;
+            
+            if (isWorking && sessionStart) {
+                currentMinutes += Math.floor((new Date() - sessionStart) / 1000 / 60);
+            }
+            
+            const slots = Math.floor(currentMinutes / 5);
+            const hours = Math.floor(currentMinutes / 60);
+            const mins = currentMinutes % 60;
+            
+            document.getElementById('slotsUsed').textContent = slots;
+            document.getElementById('slotsRemaining').textContent = 150 - slots;
+            document.getElementById('workTime').textContent = `${hours}:${mins.toString().padStart(2, '0')}`;
+            
+            // Update session list
+            const list = document.getElementById('sessionList');
+            list.innerHTML = '';
+            
+            data.today.sessions.forEach((session, i) => {
+                const div = document.createElement('div');
+                div.className = 'session-item';
+                div.innerHTML = `
+                    <strong>Session ${i + 1}</strong><br>
+                    Time: ${session.start} - ${session.end}<br>
+                    Duration: ${session.duration} min (${Math.floor(session.duration / 5)} slots)<br>
+                    Notes: ${session.notes}
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'today') {
+                document.getElementById('today-tab').style.display = 'block';
+                document.getElementById('history-tab').style.display = 'none';
+            } else {
+                document.getElementById('today-tab').style.display = 'none';
+                document.getElementById('history-tab').style.display = 'block';
+                showHistory();
+            }
+        }
+
+        function showHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+            
+            data.history.forEach(day => {
+                const div = document.createElement('div');
+                div.className = 'session-item';
+                const slots = Math.floor(day.totalMinutes / 5);
+                div.innerHTML = `
+                    <strong>${day.date}</strong><br>
+                    Sessions: ${day.sessions.length}<br>
+                    Total: ${Math.floor(day.totalMinutes / 60)}h ${day.totalMinutes % 60}m<br>
+                    Slots: ${slots} / 150
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function exportData() {
+            let csv = 'Date,Start,End,Duration,Slots,Notes\n';
+            
+            // Today's data
+            data.today.sessions.forEach(s => {
+                csv += `${data.today.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / 5)},"${s.notes}"\n`;
+            });
+            
+            // History
+            data.history.forEach(day => {
+                day.sessions.forEach(s => {
+                    csv += `${day.date},${s.start},${s.end},${s.duration},${Math.floor(s.duration / 5)},"${s.notes}"\n`;
+                });
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tracker_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        function resetToday() {
+            if (confirm('Reset today\'s data?')) {
+                data.today = {
+                    date: new Date().toDateString(),
+                    sessions: [],
+                    totalMinutes: 0
+                };
+                saveToFirebase();
+                updateDisplay();
+            }
+        }
+
+        function updateSyncStatus(status) {
+            const el = document.getElementById('syncStatus');
+            el.className = 'sync-status ' + status;
+            document.getElementById('syncText').textContent = 
+                status === 'synced' ? 'Synced' : 
+                status === 'syncing' ? 'Syncing...' : 
+                'Error';
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 5000);
+        }
+
+        function loadData() {
+            // Load initial data
+            userRef.once('value').then(snapshot => {
+                const savedData = snapshot.val();
+                if (savedData) {
+                    data = savedData;
+                    if (data.today.date !== new Date().toDateString()) {
+                        archiveToday();
+                    }
+                }
+                updateDisplay();
+                saveToFirebase(); // Save if we archived
+            });
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
