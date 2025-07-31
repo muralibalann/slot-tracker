@@ -962,52 +962,65 @@ document.getElementById('breakBtn').disabled = true; // Keep disabled since sess
         }
 
         function updateDisplay() {
-            const now = new Date();
-            const settings = memoryStorage.settings;
-            
-            let currentWorkTime = memoryStorage.todayData.totalWorkTime;
-            if (isWorking && !onBreak && sessionStartTime) {
-                currentWorkTime += (now - sessionStartTime) / 1000 / 60;
-            }
-            
-            const slotsUsed = Math.floor(currentWorkTime / settings.slotDuration);
-            document.getElementById('slotsUsed').textContent = slotsUsed;
-            document.getElementById('slotsRemaining').textContent = settings.targetSlots - slotsUsed;
-            
-            const workHours = Math.floor(currentWorkTime / 60);
-            const workMinutes = Math.floor(currentWorkTime % 60);
-            document.getElementById('timeWorked').textContent = `${workHours}:${workMinutes.toString().padStart(2, '0')}`;
-            
-            let currentBreakTime = memoryStorage.todayData.totalBreakTime;
-            if (onBreak && breakStartTime) {
-                currentBreakTime += (now - breakStartTime) / 1000 / 60;
-            }
-            
-            const breakHours = Math.floor(currentBreakTime / 60);
-            const breakMinutes = Math.floor(currentBreakTime % 60);
-            document.getElementById('breakTime').textContent = `${breakHours}:${breakMinutes.toString().padStart(2, '0')}`;
-            
-            const [endHour, endMinute] = settings.workEnd.split(':').map(Number);
-            const endTime = new Date();
-            endTime.setHours(endHour, endMinute, 0);
-            
-            const remainingMs = Math.max(0, endTime - now);
-            const remainingMinutes = remainingMs / 1000 / 60;
-            const maxPossibleSlots = slotsUsed + Math.floor(remainingMinutes / settings.slotDuration);
-            document.getElementById('maxPossible').textContent = Math.min(maxPossibleSlots, 300);
-            
-            const progress = Math.min(100, (slotsUsed / settings.targetSlots) * 100);
-            document.getElementById('progressFill').style.width = progress + '%';
-            document.getElementById('progressFill').textContent = Math.round(progress) + '%';
-            
-            const warningEl = document.getElementById('warning');
-            if (maxPossibleSlots < settings.targetSlots && slotsUsed < settings.targetSlots) {
-                warningEl.textContent = `⚠️ Warning: You can only complete ${maxPossibleSlots} slots today. You need ${settings.targetSlots - slotsUsed} more slots but only have time for ${maxPossibleSlots - slotsUsed}.`;
-                warningEl.classList.add('show');
-            } else {
-                warningEl.classList.remove('show');
-            }
-        }
+    const now = new Date();
+    const settings = memoryStorage.settings;
+
+    // Defensive defaults for settings that affect slot/time calculation
+    if (typeof settings.slotDuration !== "number" || settings.slotDuration <= 0) settings.slotDuration = 5;
+    if (typeof settings.targetSlots !== "number" || settings.targetSlots <= 0) settings.targetSlots = 150;
+
+    let currentWorkTime = memoryStorage.todayData.totalWorkTime;
+    if (isWorking && !onBreak && sessionStartTime) {
+        currentWorkTime += (now - sessionStartTime) / 1000 / 60;
+    }
+
+    const slotsUsed = Math.floor(currentWorkTime / settings.slotDuration);
+    document.getElementById('slotsUsed').textContent = slotsUsed;
+
+    document.getElementById('slotsRemaining').textContent = (settings.targetSlots - slotsUsed);
+
+    const workHours = Math.floor(currentWorkTime / 60);
+    const workMinutes = Math.floor(currentWorkTime % 60);
+    document.getElementById('timeWorked').textContent = `${workHours}:${workMinutes.toString().padStart(2, '0')}`;
+
+    let currentBreakTime = memoryStorage.todayData.totalBreakTime;
+    if (onBreak && breakStartTime) {
+        currentBreakTime += (now - breakStartTime) / 1000 / 60;
+    }
+
+    const breakHours = Math.floor(currentBreakTime / 60);
+    const breakMinutes = Math.floor(currentBreakTime % 60);
+    document.getElementById('breakTime').textContent = `${breakHours}:${breakMinutes.toString().padStart(2, '0')}`;
+
+    const [endHour, endMinute] = settings.workEnd.split(':').map(Number);
+    const endTime = new Date();
+    endTime.setHours(endHour, endMinute, 0);
+
+    const remainingMs = Math.max(0, endTime - now);
+    const remainingMinutes = remainingMs / 1000 / 60;
+
+    let maxPossibleSlots = slotsUsed + Math.floor(remainingMinutes / settings.slotDuration);
+    // Clamp maxPossibleSlots between 0 and 300
+    maxPossibleSlots = Math.max(0, Math.min(maxPossibleSlots, 300));
+    document.getElementById('maxPossible').textContent = maxPossibleSlots;
+
+    let progress = 0;
+    if (settings.targetSlots > 0) {
+        progress = Math.min(100, (slotsUsed / settings.targetSlots) * 100);
+    }
+    document.getElementById('progressFill').style.width = progress + '%';
+    document.getElementById('progressFill').textContent = Math.round(progress) + '%';
+
+    // Show warning if not enough time left for target
+    const warningEl = document.getElementById('warning');
+    if (maxPossibleSlots < settings.targetSlots && slotsUsed < settings.targetSlots) {
+        warningEl.textContent = `⚠️ Warning: You can only complete ${maxPossibleSlots} slots today. You need ${settings.targetSlots - slotsUsed} more slots but only have time for ${maxPossibleSlots - slotsUsed}.`;
+        warningEl.classList.add('show');
+    } else {
+        warningEl.classList.remove('show');
+    }
+}
+
 
         function displayTodaySessions() {
             const container = document.getElementById('todaySessions');
