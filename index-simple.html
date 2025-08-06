@@ -6,7 +6,6 @@
     <title>Slot Tracker - Cloud Sync</title>
     <meta name="theme-color" content="#667eea">
     
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
@@ -254,12 +253,14 @@
 
                 <div class="status-grid">
                     <div class="status-card primary">
-                        <h3>Slots Used</h3>
-                        <div class="value" id="slotsUsed">0</div>
+                        <h3>Slots Used / Goal</h3>
+                        <div class="value">
+                            <span id="slotsUsed">0</span> / <span id="maxSlots">150</span>
+                        </div>
                     </div>
                     <div class="status-card">
-                        <h3>Remaining</h3>
-                        <div class="value" id="slotsRemaining">150</div>
+                        <h3>Remaining Today</h3>
+                        <div class="value" id="slotsRemaining">0</div>
                     </div>
                     <div class="status-card">
                         <h3>Work Time</h3>
@@ -298,13 +299,13 @@
         // IMPORTANT: REPLACE ALL VALUES BELOW WITH YOUR FIREBASE CONFIG
         // Get these from Firebase Console > Project Settings > Your apps
         const firebaseConfig = {
-              apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
-  authDomain: "slot-tracker-c7ec1.firebaseapp.com",
-  databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
-  projectId: "slot-tracker-c7ec1",
-  storageBucket: "slot-tracker-c7ec1.firebasestorage.app",
-  messagingSenderId: "639902490570",
-  appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
+            apiKey: "AIzaSyB6vx8twbp9VCy04Kffy1WFax_wgHSI164",
+            authDomain: "slot-tracker-c7ec1.firebaseapp.com",
+            databaseURL: "https://slot-tracker-c7ec1-default-rtdb.firebaseio.com",
+            projectId: "slot-tracker-c7ec1",
+            storageBucket: "slot-tracker-c7ec1.appspot.com",
+            messagingSenderId: "639902490570",
+            appId: "1:639902490570:web:74e2f02aa12f6d9f4e7933"
         };
 
         // Initialize Firebase
@@ -515,6 +516,20 @@
             }
         }
 
+        // ADDED: Calculates slots left from now until 22:30 local time.
+        function getSlotsLeftInDay() {
+            const now = new Date();
+            const endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22, 30, 0); // 22:30:00 local time
+
+            if (now >= endTime) {
+                return 0; // Past the end of the workday
+            }
+
+            const minutesLeft = (endTime - now) / (1000 * 60);
+            return Math.floor(minutesLeft / 5);
+        }
+
+        // MODIFIED: updateDisplay now calculates remaining slots dynamically.
         function updateDisplay() {
             validateData(); // Ensure data structure exists
             
@@ -527,9 +542,11 @@
             const slots = Math.floor(currentMinutes / 5);
             const hours = Math.floor(currentMinutes / 60);
             const mins = currentMinutes % 60;
+            const dailyGoal = 150;
             
             document.getElementById('slotsUsed').textContent = slots;
-            document.getElementById('slotsRemaining').textContent = 150 - slots;
+            document.getElementById('maxSlots').textContent = dailyGoal;
+            document.getElementById('slotsRemaining').textContent = getSlotsLeftInDay(); // This is the fix.
             document.getElementById('workTime').textContent = `${hours}:${mins.toString().padStart(2, '0')}`;
             
             // Update session list
